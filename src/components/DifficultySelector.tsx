@@ -1,25 +1,32 @@
-type Props = {
-  onSelect: (difficulty: string) => void;
-};
+interface DifficultySelectorProps {
+  onSelect: (difficulty: "easy" | "medium" | "hard") => void;
+}
 
-export default function DifficultySelector({
-  onSelect,
-}: Props) {
+function DifficultySelector({ onSelect }: DifficultySelectorProps) {
   return (
-    <div>
-      <h2>Select Difficulty</h2>
-
-      <button onClick={() => onSelect("easy")}>
+    <div className="flex gap-4">
+      <button
+        onClick={() => onSelect("easy")}
+        className="rounded-lg bg-green-600 px-5 py-2 text-white"
+      >
         Easy
       </button>
 
-      <button onClick={() => onSelect("medium")}>
+      <button
+        onClick={() => onSelect("medium")}
+        className="rounded-lg bg-yellow-600 px-5 py-2 text-white"
+      >
         Medium
       </button>
 
-      <button onClick={() => onSelect("hard")}>
+      <button
+        onClick={() => onSelect("hard")}
+        className="rounded-lg bg-red-600 px-5 py-2 text-white"
+      >
         Hard
       </button>
     </div>
   );
 }
+
+export default DifficultySelector;
