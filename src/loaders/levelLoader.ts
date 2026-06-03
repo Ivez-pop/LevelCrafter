@@ -1,25 +1,11 @@
-import easy from "../mock-levels/easy.json";
-import medium from "../mock-levels/medium.json";
-import hard from "../mock-levels/hard.json";
+// levelLoader is deprecated. The application now uses the storage API
+// to manage levels (`src/utils/storage.ts`).
+// This file remains as a compatibility shim and will throw if used.
 
 import type { Level } from "../types/level";
 
-export function loadLevel(
-  difficulty: string
-): Level {
-
-  switch (difficulty) {
-
-    case "easy":
-      return easy as Level;
-
-    case "medium":
-      return medium as Level;
-
-    case "hard":
-      return hard as Level;
-
-    default:
-      throw new Error("Level not found");
-  }
+export function loadLevel(_: string): Level {
+  throw new Error(
+    "levelLoader.loadLevel is removed — use getLevelById / getLevelsByDifficulty from utils/storage instead",
+  );
 }

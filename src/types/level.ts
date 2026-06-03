@@ -7,7 +7,10 @@ export type Tile =
   | "exit";
 
 export interface Level {
+  id: string;
+  name: string;
   difficulty: "easy" | "medium" | "hard";
+  createdAt: number;
   width: number;
   height: number;
   grid: Tile[][];

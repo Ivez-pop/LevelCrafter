@@ -1,34 +1,29 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DifficultySelector from "../components/DifficultySelector";
+import GridEditor from "../components/GridEditor";
 import TilePalette from "../components/TilePalette";
-import type { Tile, Level } from "../types/level";
-import { saveLevel, loadLevel } from "../utils/storage";
+import type { Tile } from "../types/level";
+import { saveLevel } from "../utils/storage";
+import { validateLevel } from "../utils/levelValidation";
+import { difficultySizes, type Difficulty } from "../constants/difficulty";
 
 function CreateLevelPage() {
-  const [difficulty, setDifficulty] = useState<
-    "easy" | "medium" | "hard" | null
-  >(null);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
 
   const [grid, setGrid] = useState<Tile[][]>([]);
+
+  const [levelName, setLevelName] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   const [selectedTile, setSelectedTile] = useState<Tile>("wall");
 
   const navigate = useNavigate();
 
-  const createGrid = (selectedDifficulty: "easy" | "medium" | "hard") => {
+  const createGrid = (selectedDifficulty: Difficulty) => {
     setDifficulty(selectedDifficulty);
 
-    let size = 5;
-
-    if (selectedDifficulty === "medium") {
-      size = 8;
-    }
-
-    if (selectedDifficulty === "hard") {
-      size = 12;
-    }
-
+    const size = difficultySizes[selectedDifficulty];
     const newGrid: Tile[][] = Array.from({ length: size }, () =>
       Array.from({ length: size }, () => "empty" as Tile),
     );
@@ -48,95 +43,31 @@ function CreateLevelPage() {
     setGrid(updatedGrid);
   };
 
-  const getTileColor = (tile: Tile) => {
-    switch (tile) {
-      case "wall":
-        return "bg-gray-500";
-
-      case "coin":
-        return "bg-yellow-400";
-
-      case "hazard":
-        return "bg-red-500";
-
-      case "player":
-        return "bg-green-500";
-
-      case "exit":
-        return "bg-blue-500";
-
-      default:
-        return "bg-white";
-    }
-  };
-
-  const validateLevel = () => {
-    let playerCount = 0;
-    let exitCount = 0;
-
-    for (const row of grid) {
-      for (const tile of row) {
-        if (tile === "player") {
-          playerCount++;
-        }
-
-        if (tile === "exit") {
-          exitCount++;
-        }
-      }
-    }
-
-    if (playerCount !== 1) {
-      alert("Level must contain exactly 1 player.");
-      return false;
-    }
-
-    if (exitCount !== 1) {
-      alert("Level must contain exactly 1 exit.");
-      return false;
-    }
-
-    return true;
-  };
-
   const handleSaveLevel = () => {
-    if (!validateLevel()) {
+    if (!validateLevel(levelName, grid, difficulty, setSaveError)) {
       return;
     }
 
     if (!difficulty) return;
 
-    const level: Level = {
+    const id = saveLevel({
+      name: levelName.trim(),
       difficulty,
       width: grid.length,
       height: grid.length,
       grid,
-    };
+    });
 
-    saveLevel(level);
-
-    alert(`${difficulty} level saved!`);
+    alert(`Level saved! id: ${id}`);
   };
 
-  const handleLoadLevel = () => {
-    if (!difficulty) return;
-
-    const level = loadLevel(difficulty);
-
-    if (!level) {
-      alert("No saved level found!");
-      return;
-    }
-
-    setGrid(level.grid);
-
-    alert(`${difficulty} level loaded!`);
-  };
+  // load handled in Play page; Create page only saves/exports
 
   const handleExportJson = () => {
     if (!difficulty) return;
 
-    const level: Level = {
+    const level = {
+      name: levelName.trim(),
       difficulty,
       width: grid.length,
       height: grid.length,
@@ -175,6 +106,26 @@ function CreateLevelPage() {
 
       {grid.length > 0 && (
         <>
+          <div className="mb-4 flex flex-col items-center gap-2">
+            <label className="text-lg font-medium" htmlFor="level-name-input">
+              Level Name:
+            </label>
+            <input
+              id="level-name-input"
+              value={levelName}
+              onChange={(e) => {
+                setLevelName(e.target.value);
+                if (saveError) {
+                  setSaveError("");
+                }
+              }}
+              placeholder="Enter level name"
+              className="rounded-lg bg-white px-4 py-2 text-slate-900 w-80"
+            />
+            {saveError && (
+              <p className="text-sm text-red-400">{saveError}</p>
+            )}
+          </div>
           <TilePalette
             selectedTile={selectedTile}
             onSelect={handleTileSelect}
@@ -185,53 +136,27 @@ function CreateLevelPage() {
           <div className="mb-6 flex flex-wrap justify-center gap-4">
             <button
               onClick={handleSaveLevel}
-              className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-500"
+              className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
             >
               Save Level
             </button>
 
             <button
-              onClick={handleLoadLevel}
-              className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500"
-            >
-              Load Level
-            </button>
-
-            <button
               onClick={handleExportJson}
-              className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white hover:bg-purple-500"
+              className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
             >
               Export JSON
             </button>
 
             <button
               onClick={() => navigate("/play")}
-              className="rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-500"
+              className="rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
             >
               Playtest
             </button>
           </div>
 
-          <div className="flex justify-center">
-            <div
-              className="grid gap-1"
-              style={{
-                gridTemplateColumns: `repeat(${grid.length}, 48px)`,
-              }}
-            >
-              {grid.map((row, rowIndex) =>
-                row.map((cell, colIndex) => (
-                  <button
-                    key={`${rowIndex}-${colIndex}`}
-                    onClick={() => placeTile(rowIndex, colIndex)}
-                    className={`h-12 w-12 border border-slate-600 ${getTileColor(
-                      cell,
-                    )}`}
-                  />
-                )),
-              )}
-            </div>
-          </div>
+          <GridEditor grid={grid} onCellClick={placeTile} />
         </>
       )}
     </div>
