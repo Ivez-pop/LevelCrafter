@@ -44,6 +44,28 @@ function CreateLevelPage() {
     setGrid(updatedGrid);
   };
 
+  const getTileColor = (tile: Tile) => {
+    switch (tile) {
+      case "wall":
+        return "bg-gray-500";
+
+      case "coin":
+        return "bg-yellow-400";
+
+      case "hazard":
+        return "bg-red-500";
+
+      case "player":
+        return "bg-green-500";
+
+      case "exit":
+        return "bg-blue-500";
+
+      default:
+        return "bg-white";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8">
       <h1 className="mb-8 text-center text-4xl font-bold">Create Level</h1>
@@ -69,7 +91,7 @@ function CreateLevelPage() {
             <div
               className="grid gap-1"
               style={{
-                gridTemplateColumns: `repeat(${grid.length}, 40px)`,
+                gridTemplateColumns: `repeat(${grid.length}, 48px)`,
               }}
             >
               {grid.map((row, rowIndex) =>
@@ -77,10 +99,10 @@ function CreateLevelPage() {
                   <button
                     key={`${rowIndex}-${colIndex}`}
                     onClick={() => placeTile(rowIndex, colIndex)}
-                    className="h-10 w-10 border border-slate-500 bg-white text-xs text-black"
-                  >
-                    {cell}
-                  </button>
+                    className={`h-12 w-12 border border-slate-600 ${getTileColor(
+                      cell,
+                    )}`}
+                  />
                 )),
               )}
             </div>
