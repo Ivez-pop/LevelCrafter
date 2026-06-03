@@ -1,1 +1,71 @@
 @import "tailwindcss";
+
+@layer components {
+  .arcade-screen {
+    @apply min-h-screen bg-[#16113f] bg-[linear-gradient(0deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:24px_24px] p-4 text-white sm:p-6;
+  }
+
+  .arcade-shell {
+    @apply mx-auto w-full max-w-7xl;
+  }
+
+  .arcade-title {
+    @apply text-center font-mono text-4xl font-black uppercase text-yellow-300 drop-shadow-[4px_4px_0px_#000] sm:text-6xl;
+  }
+
+  .arcade-kicker {
+    @apply font-mono text-xs font-black uppercase tracking-[0.3em] text-cyan-200;
+  }
+
+  .arcade-panel {
+    @apply border-4 border-black bg-[#2b2368] shadow-[8px_8px_0px_#000,inset_0_0_0_4px_rgba(255,255,255,0.08)];
+  }
+
+  .arcade-panel-deep {
+    @apply border-4 border-black bg-[#0f172a] shadow-[6px_6px_0px_#000];
+  }
+
+  .arcade-chip {
+    @apply border-2 border-black bg-[#12122f] px-3 py-2 text-center font-mono text-sm font-black uppercase shadow-[3px_3px_0px_#000];
+  }
+
+  .arcade-section-label {
+    @apply mb-3 font-mono text-sm font-black uppercase tracking-wide text-yellow-300;
+  }
+
+  .arcade-input {
+    @apply w-full border-4 border-black bg-[#f8fbff] px-3 py-3 font-mono text-sm font-black text-black outline-none shadow-[4px_4px_0px_#000] placeholder:text-slate-500 focus:bg-white focus:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button {
+    @apply border-4 border-black px-5 py-3 font-mono text-sm font-black uppercase shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button-yellow {
+    @apply border-4 border-black bg-yellow-300 px-5 py-3 font-mono text-sm font-black uppercase text-black shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 hover:bg-yellow-200 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button-lime {
+    @apply border-4 border-black bg-lime-400 px-5 py-3 font-mono text-sm font-black uppercase text-black shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 hover:bg-lime-300 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button-cyan {
+    @apply border-4 border-black bg-cyan-300 px-5 py-3 font-mono text-sm font-black uppercase text-black shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 hover:bg-cyan-200 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button-rose {
+    @apply border-4 border-black bg-rose-500 px-5 py-3 font-mono text-sm font-black uppercase text-white shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 hover:bg-rose-400 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button-violet {
+    @apply border-4 border-black bg-violet-400 px-5 py-3 font-mono text-sm font-black uppercase text-black shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 hover:bg-violet-300 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-button-orange {
+    @apply border-4 border-black bg-orange-300 px-5 py-3 font-mono text-sm font-black uppercase text-black shadow-[5px_5px_0px_#000] transition-transform hover:-translate-y-0.5 hover:bg-orange-200 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000];
+  }
+
+  .arcade-tile {
+    @apply border-2 border-black shadow-[inset_3px_3px_0px_rgba(255,255,255,0.28),inset_-3px_-3px_0px_rgba(0,0,0,0.35)] transition-transform hover:-translate-y-0.5 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-yellow-300;
+  }
+}

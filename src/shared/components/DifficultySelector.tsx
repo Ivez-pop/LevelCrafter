@@ -1,27 +1,29 @@
+import type { Difficulty } from "../../types/gameState";
+
 interface DifficultySelectorProps {
-  onSelect: (difficulty: "easy" | "medium" | "hard") => void;
+  onSelect: (difficulty: Difficulty) => void;
 }
 
 function DifficultySelector({ onSelect }: DifficultySelectorProps) {
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-wrap justify-center gap-3">
       <button
         onClick={() => onSelect("easy")}
-        className="rounded-lg bg-green-600 px-5 py-2 text-white"
+        className="arcade-button-lime"
       >
         Easy
       </button>
 
       <button
         onClick={() => onSelect("medium")}
-        className="rounded-lg bg-yellow-600 px-5 py-2 text-white"
+        className="arcade-button-yellow"
       >
         Medium
       </button>
 
       <button
         onClick={() => onSelect("hard")}
-        className="rounded-lg bg-red-600 px-5 py-2 text-white"
+        className="arcade-button-rose"
       >
         Hard
       </button>

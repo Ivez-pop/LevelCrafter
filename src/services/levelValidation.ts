@@ -50,21 +50,24 @@ export const validateLevel = (
   }
 
   if (exitCount === 0) {
-    alert("Level must contain at least 1 exit. Currently: 0");
+    alert("Level must contain exactly 1 exit. Currently: 0");
     return false;
   }
 
   if (exitCount > 1) {
-    alert(`Level should contain exactly 1 exit. Currently: ${exitCount}`);
+    alert(`Level must contain exactly 1 exit. Currently: ${exitCount}`);
     return false;
   }
 
-  if (difficulty) {
-    const expected = difficultySizes[difficulty as keyof typeof difficultySizes];
-    if (grid.length !== expected) {
-      alert(`Grid size must be ${expected} x ${expected} for ${difficulty} difficulty.`);
-      return false;
-    }
+  if (!difficulty) {
+    setSaveError("Please select a difficulty.");
+    return false;
+  }
+
+  const expectedSize = difficultySizes[difficulty as "easy" | "medium" | "hard"];
+  if (grid.length !== expectedSize) {
+    alert(`Grid size must be ${expectedSize}x${expectedSize}.`);
+    return false;
   }
 
   return true;

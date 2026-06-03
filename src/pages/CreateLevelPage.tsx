@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import DifficultySelector from "../components/DifficultySelector";
-import GridEditor from "../components/GridEditor";
-import TilePalette from "../components/TilePalette";
+import DifficultySelector from "../shared/components/DifficultySelector";
+import GridEditor from "../features/editor/components/GridEditor";
+import TilePalette from "../features/editor/components/TilePalette";
 import type { Tile } from "../types/level";
-import { saveLevel } from "../utils/storage";
-import { validateLevel } from "../utils/levelValidation";
+import { saveLevel } from "../services/levelStorage";
+import { validateLevel } from "../services/levelValidation";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
 
 function CreateLevelPage() {
@@ -61,8 +61,6 @@ function CreateLevelPage() {
     alert(`Level saved! id: ${id}`);
   };
 
-  // load handled in Play page; Create page only saves/exports
-
   const handleExportJson = () => {
     if (!difficulty) return;
 
@@ -93,72 +91,95 @@ function CreateLevelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8 text-white">
-      <h1 className="mb-8 text-center text-4xl font-bold">Create Level</h1>
+    <div className="arcade-screen">
+      <div className="arcade-shell grid min-h-[calc(100vh-2rem)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] sm:min-h-[calc(100vh-3rem)]">
+        <div className="arcade-panel flex min-h-0 flex-col gap-5 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-auto">
+          <div>
+            <p className="arcade-kicker mb-2">Builder</p>
+            <h1 className="font-mono text-3xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">
+              Create Level
+            </h1>
+          </div>
 
-      <div className="mb-8 flex justify-center">
-        <DifficultySelector onSelect={createGrid} />
-      </div>
+          <section>
+            <h3 className="arcade-section-label">Difficulty</h3>
 
-      {difficulty && (
-        <p className="mb-6 text-center">Difficulty: {difficulty}</p>
-      )}
+            <DifficultySelector onSelect={createGrid} />
 
-      {grid.length > 0 && (
-        <>
-          <div className="mb-4 flex flex-col items-center gap-2">
-            <label className="text-lg font-medium" htmlFor="level-name-input">
-              Level Name:
-            </label>
+            {difficulty && (
+              <div className="arcade-chip mt-3 bg-yellow-300 text-black">
+                {difficulty.toUpperCase()}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h3 className="arcade-section-label">Level Name</h3>
+
             <input
               id="level-name-input"
               value={levelName}
               onChange={(e) => {
                 setLevelName(e.target.value);
+
                 if (saveError) {
                   setSaveError("");
                 }
               }}
               placeholder="Enter level name"
-              className="rounded-lg bg-white px-4 py-2 text-slate-900 w-80"
+              className="arcade-input"
             />
+
             {saveError && (
-              <p className="text-sm text-red-400">{saveError}</p>
+              <p className="mt-3 border-2 border-black bg-rose-500 px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000]">
+                {saveError}
+              </p>
             )}
-          </div>
-          <TilePalette
-            selectedTile={selectedTile}
-            onSelect={handleTileSelect}
-          />
+          </section>
 
-          <p className="mb-6 text-center">Selected Tile: {selectedTile}</p>
+          <section>
+            <h3 className="arcade-section-label">Tiles</h3>
 
-          <div className="mb-6 flex flex-wrap justify-center gap-4">
-            <button
-              onClick={handleSaveLevel}
-              className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
-            >
+            <TilePalette selectedTile={selectedTile} onSelect={handleTileSelect} />
+          </section>
+
+          <div className="mt-auto grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <button onClick={handleSaveLevel} className="arcade-button-lime w-full">
               Save Level
             </button>
 
-            <button
-              onClick={handleExportJson}
-              className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
-            >
+            <button onClick={handleExportJson} className="arcade-button-violet w-full">
               Export JSON
             </button>
 
             <button
               onClick={() => navigate("/play")}
-              className="rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="arcade-button-orange w-full"
             >
               Playtest
             </button>
           </div>
+        </div>
 
-          <GridEditor grid={grid} onCellClick={placeTile} />
-        </>
-      )}
+        <div className="arcade-panel flex min-h-[420px] min-w-0 items-center justify-center p-3 sm:p-6 lg:min-h-0">
+          {grid.length > 0 ? (
+            <div className="arcade-panel-deep max-h-full max-w-full overflow-auto p-3 sm:p-6">
+              <GridEditor grid={grid} onCellClick={placeTile} />
+            </div>
+          ) : (
+            <div className="max-w-xl text-center">
+              <p className="arcade-kicker mb-4">Ready</p>
+              <h2 className="font-mono text-3xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000] sm:text-5xl">
+                Select Difficulty
+              </h2>
+
+              <p className="mx-auto mt-4 max-w-md font-mono text-sm font-bold uppercase leading-6 text-cyan-200">
+                Create a grid to start building your level.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

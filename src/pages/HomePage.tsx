@@ -4,64 +4,130 @@ function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6">
-      <div className="w-full max-w-6xl">
-        <div className="text-center mb-12">
-          <p className="text-sm uppercase tracking-[0.4em] text-indigo-300 mb-4">
-            Welcome to LevelCrafter
+    <div className="arcade-screen flex items-center justify-center">
+      <div className="arcade-shell">
+        <div className="mb-10 text-center sm:mb-12">
+          <p className="arcade-kicker mb-4">
+            Welcome to
           </p>
-          <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight">
+
+          <h1 className="arcade-title text-5xl md:text-7xl">
             LevelCrafter
           </h1>
-          <p className="mt-5 text-slate-300 text-lg md:text-xl max-w-2xl mx-auto">
-            Build, Save and Play Custom Puzzle Levels
+
+          <p className="mx-auto mt-5 max-w-2xl font-mono text-sm font-black uppercase leading-7 text-cyan-200 sm:text-base">
+            Create, save, and play custom puzzle levels
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="group rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur-xl transition-transform duration-300 hover:-translate-y-1 hover:border-indigo-400/30">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
-                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div
+            className="
+              arcade-panel
+              p-5
+              transition-transform hover:-translate-y-1
+              sm:p-8
+            "
+          >
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+              <div
+                className="
+                  flex items-center justify-center
+                  h-16 w-16 shrink-0
+                  border-4 border-black
+                  bg-rose-400
+                  text-black
+                  shadow-[5px_5px_0px_#000]
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M12 5v14M5 12h14" />
                 </svg>
               </div>
+
               <div>
-                <h2 className="text-2xl font-semibold text-white">Create Mode</h2>
-                <p className="mt-3 text-slate-300">
-                  Design your own level using the level editor.
+                <h2 className="font-mono text-3xl font-black uppercase text-yellow-300">
+                  CREATE MODE
+                </h2>
+
+                <p className="mt-3 max-w-lg text-sm font-semibold leading-6 text-cyan-100 sm:text-base">
+                  Design your own puzzle levels and save them locally.
                 </p>
               </div>
             </div>
+
             <button
               onClick={() => navigate("/create")}
-              className="mt-8 inline-flex items-center justify-center rounded-2xl bg-indigo-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400"
+              className="arcade-button-yellow mt-8 w-full sm:w-auto"
             >
-              Create Level
+              CREATE LEVEL
             </button>
           </div>
 
-          <div className="group rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur-xl transition-transform duration-300 hover:-translate-y-1 hover:border-cyan-400/30">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-cyan-500 text-white shadow-lg shadow-cyan-500/20">
-                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <div
+            className="
+              arcade-panel
+              p-5
+              transition-transform hover:-translate-y-1
+              sm:p-8
+            "
+          >
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+              <div
+                className="
+                  flex items-center justify-center
+                  h-16 w-16 shrink-0
+                  border-4 border-black
+                  bg-cyan-300
+                  text-black
+                  shadow-[5px_5px_0px_#000]
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M5 4v16l15-8L5 4z" />
                 </svg>
               </div>
+
               <div>
-                <h2 className="text-2xl font-semibold text-white">Play Mode</h2>
-                <p className="mt-3 text-slate-300">
-                  Browse and play saved levels.
+                <h2 className="font-mono text-3xl font-black uppercase text-yellow-300">
+                  PLAY MODE
+                </h2>
+
+                <p className="mt-3 max-w-lg text-sm font-semibold leading-6 text-cyan-100 sm:text-base">
+                  Browse your saved levels and test your puzzle-solving skills.
                 </p>
               </div>
             </div>
+
             <button
               onClick={() => navigate("/play")}
-              className="mt-8 inline-flex items-center justify-center rounded-2xl bg-cyan-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-cyan-400"
+              className="arcade-button-cyan mt-8 w-full sm:w-auto"
             >
-              Play Levels
+              PLAY LEVELS
             </button>
           </div>
+        </div>
+
+        <div className="mt-8 text-center sm:mt-10">
+          <p className="font-mono text-xs font-black uppercase tracking-[0.25em] text-yellow-200">
+            Build / Create / Play
+          </p>
         </div>
       </div>
     </div>
