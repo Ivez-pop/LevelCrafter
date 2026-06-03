@@ -30,13 +30,18 @@ function CreateLevelPage() {
     );
 
     setGrid(newGrid);
-
-    console.log(selectedDifficulty);
   };
 
   const handleTileSelect = (tile: Tile) => {
     setSelectedTile(tile);
-    console.log(tile);
+  };
+
+  const placeTile = (rowIndex: number, colIndex: number) => {
+    const updatedGrid = [...grid];
+
+    updatedGrid[rowIndex][colIndex] = selectedTile;
+
+    setGrid(updatedGrid);
   };
 
   return (
@@ -69,10 +74,13 @@ function CreateLevelPage() {
             >
               {grid.map((row, rowIndex) =>
                 row.map((cell, colIndex) => (
-                  <div
+                  <button
                     key={`${rowIndex}-${colIndex}`}
-                    className="h-10 w-10 border border-slate-500 bg-white"
-                  />
+                    onClick={() => placeTile(rowIndex, colIndex)}
+                    className="h-10 w-10 border border-slate-500 bg-white text-xs text-black"
+                  >
+                    {cell}
+                  </button>
                 )),
               )}
             </div>
