@@ -1,65 +1,131 @@
-# React + TypeScript + Vite
+# LevelCrafter
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+LevelCrafter is a browser-based level editor and playtesting platform where users can create, save, and play custom puzzle levels.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+### Create Mode
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* Create custom levels using a grid editor
+* Name your levels
+* Difficulty-based grid generation:
 
-## Expanding the ESLint configuration
+  * Easy → 5×5
+  * Medium → 8×8
+  * Hard → 12×12
+* Place:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+  * Walls
+  * Coins
+  * Hazards
+  * Player Spawn
+  * Exit
+* Save levels locally
+* Export levels as JSON
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    ````markdown
-    # LevelCrafter
+### Play Mode
 
-    LevelCrafter is a browser-based level editor and playtesting tool that lets you design, save and play custom puzzle levels.
+* Browse levels by difficulty
+* Select a level to play
+* WASD movement controls
+* Collision detection
+* Coin collection
+* Hazard restart
+* Exit and win condition
 
-    Features
-    - Create custom levels using a simple grid editor
-    - Difficulty presets (easy 5x5, medium 8x8, hard 12x12)
-    - Save levels to localStorage and export JSON
-    - Playtest levels with WASD controls, collision, hazards and collectibles
+---
 
-    Quick Start
-    1. Install dependencies:
+## Tech Stack
 
-    ```bash
-    npm install
-    ```
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* LocalStorage
 
-    2. Start development server:
+---
 
-    ```bash
-    npm run dev
-    # Open http://localhost:5174
-    ```
+## Getting Started
 
-    3. Build for production:
+Install dependencies:
 
-    ```bash
-    npm run build
-    ```
+```bash
+npm install
+```
 
-    How it works
-    - Create Mode: choose difficulty → generate grid → place tiles → Save Level or Export JSON
-    - Play Mode: choose difficulty → load saved level → play with WASD
+Start development server:
 
-    Storage
-    - Levels are stored in `localStorage` using keys like `easy-level`, `medium-level`, `hard-level`.
+```bash
+npm run dev
+```
 
-    More details
-    - High level architecture: see `readme/hld.md`
-    - Development workflow: see `readme/workflow.md`
+Build production bundle:
 
-    ````
-      parserOptions: {
+```bash
+npm run build
+```
+
+---
+
+## Project Structure
+
+```text
+src/
+├── components/
+├── pages/
+├── game/
+├── utils/
+├── constants/
+├── types/
+└── App.tsx
+```
+
+---
+
+## Documentation
+
+Additional documentation can be found in:
+
+* `readme/hld.md`
+* `readme/workflow.md`
+
+---
+
+## Core Flow
+
+```text
+Create Level
+    ↓
+Choose Difficulty
+    ↓
+Build Map
+    ↓
+Save Level
+    ↓
+Play Mode
+    ↓
+Choose Difficulty
+    ↓
+Select Level
+    ↓
+Play
+```
+
+---
+
+## Controls
+
+```text
+W → Move Up
+A → Move Left
+S → Move Down
+D → Move Right
+```
+
+---
+
+## License
+
+MIT
