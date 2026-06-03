@@ -125,16 +125,48 @@ function CreateLevelPage() {
     alert(`${difficulty} level loaded!`);
   };
 
+  const handleExportJson = () => {
+    if (!difficulty) return;
+
+    const level: Level = {
+      difficulty,
+      width: grid.length,
+      height: grid.length,
+      grid,
+    };
+
+    const json = JSON.stringify(level, null, 2);
+
+    const blob = new Blob([json], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${difficulty}-level.json`;
+
+    link.click();
+
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8">
-      <h1 className="mb-8 text-center text-4xl font-bold">Create Level</h1>
+      <h1 className="mb-8 text-center text-4xl font-bold">
+        Create Level
+      </h1>
 
       <div className="mb-8 flex justify-center">
         <DifficultySelector onSelect={createGrid} />
       </div>
 
       {difficulty && (
-        <p className="mb-6 text-center">Difficulty: {difficulty}</p>
+        <p className="mb-6 text-center">
+          Difficulty: {difficulty}
+        </p>
       )}
 
       {grid.length > 0 && (
@@ -144,9 +176,11 @@ function CreateLevelPage() {
             onSelect={handleTileSelect}
           />
 
-          <p className="mb-6 text-center">Selected Tile: {selectedTile}</p>
+          <p className="mb-6 text-center">
+            Selected Tile: {selectedTile}
+          </p>
 
-          <div className="mb-6 flex justify-center gap-4">
+          <div className="mb-6 flex flex-wrap justify-center gap-4">
             <button
               onClick={handleSaveLevel}
               className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-500"
@@ -159,6 +193,13 @@ function CreateLevelPage() {
               className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500"
             >
               Load Level
+            </button>
+
+            <button
+              onClick={handleExportJson}
+              className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white hover:bg-purple-500"
+            >
+              Export JSON
             </button>
           </div>
 
