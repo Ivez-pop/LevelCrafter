@@ -1,0 +1,16 @@
+{
+  "difficulty": "medium",
+  "width": 9,
+  "height": 9,
+  "grid": [
+    ["wall","wall","wall","wall","wall","wall","wall","wall","wall"],
+    ["wall","player","empty","empty","wall","empty","coin","empty","wall"],
+    ["wall","empty","hazard","empty","wall","empty","empty","empty","wall"],
+    ["wall","empty","empty","empty","wall","empty","empty","exit","wall"],
+    ["wall","wall","wall","empty","wall","wall","wall","wall","wall"],
+    ["wall","empty","empty","empty","empty","empty","empty","empty","wall"],
+    ["wall","empty","coin","empty","empty","hazard","empty","empty","wall"],
+    ["wall","empty","empty","empty","empty","empty","empty","empty","wall"],
+    ["wall","wall","wall","wall","wall","wall","wall","wall","wall"]
+  ]
+}
