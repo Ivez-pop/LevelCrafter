@@ -1,7 +1,8 @@
 import { useState } from "react";
 import DifficultySelector from "../components/DifficultySelector";
 import TilePalette from "../components/TilePalette";
-import type { Tile } from "../types/level";
+import type { Tile, Level } from "../types/level";
+import { saveLevel, loadLevel } from "../utils/storage";
 
 function CreateLevelPage() {
   const [difficulty, setDifficulty] = useState<
@@ -48,22 +49,47 @@ function CreateLevelPage() {
     switch (tile) {
       case "wall":
         return "bg-gray-500";
-
       case "coin":
         return "bg-yellow-400";
-
       case "hazard":
         return "bg-red-500";
-
       case "player":
         return "bg-green-500";
-
       case "exit":
         return "bg-blue-500";
-
       default:
         return "bg-white";
     }
+  };
+
+  const handleSaveLevel = () => {
+    if (!difficulty) return;
+
+    const level: Level = {
+      difficulty,
+      width: grid.length,
+      height: grid.length,
+      grid,
+    };
+
+    saveLevel(level);
+
+    alert(`${difficulty} level saved!`);
+  };
+
+  const handleLoadLevel = () => {
+    if (!difficulty) return;
+
+    const level = loadLevel(difficulty);
+
+    if (!level) {
+      alert("No saved level found!");
+      return;
+    }
+
+    setGrid(level.grid);
+
+    alert(`${difficulty} level loaded!`);
   };
 
   return (
@@ -86,6 +112,22 @@ function CreateLevelPage() {
           />
 
           <p className="mb-6 text-center">Selected Tile: {selectedTile}</p>
+
+          <div className="mb-6 flex justify-center gap-4">
+            <button
+              onClick={handleSaveLevel}
+              className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-500"
+            >
+              Save Level
+            </button>
+
+            <button
+              onClick={handleLoadLevel}
+              className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500"
+            >
+              Load Level
+            </button>
+          </div>
 
           <div className="flex justify-center">
             <div
