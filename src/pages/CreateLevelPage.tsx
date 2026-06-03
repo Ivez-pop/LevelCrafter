@@ -1,15 +1,67 @@
+import { useState } from "react";
 import DifficultySelector from "../components/DifficultySelector";
+import type { Tile } from "../types/level";
 
 function CreateLevelPage() {
-  const handleDifficultySelect = (difficulty: "easy" | "medium" | "hard") => {
-    console.log(difficulty);
+  const [difficulty, setDifficulty] = useState<
+    "easy" | "medium" | "hard" | null
+  >(null);
+
+  const [grid, setGrid] = useState<Tile[][]>([]);
+
+  const createGrid = (selectedDifficulty: "easy" | "medium" | "hard") => {
+    setDifficulty(selectedDifficulty);
+
+    let size = 5;
+
+    if (selectedDifficulty === "medium") {
+      size = 8;
+    }
+
+    if (selectedDifficulty === "hard") {
+      size = 12;
+    }
+
+    const newGrid: Tile[][] = Array.from({ length: size }, () =>
+      Array.from({ length: size }, () => "empty" as Tile),
+    );
+
+    setGrid(newGrid);
+
+    console.log(selectedDifficulty);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center pt-20">
-      <h1 className="mb-8 text-4xl font-bold">Create Level</h1>
+    <div className="min-h-screen bg-slate-950 text-white p-8">
+      <h1 className="text-4xl font-bold mb-8 text-center">Create Level</h1>
 
-      <DifficultySelector onSelect={handleDifficultySelect} />
+      <div className="flex justify-center mb-8">
+        <DifficultySelector onSelect={createGrid} />
+      </div>
+
+      {difficulty && (
+        <p className="text-center mb-6">Difficulty: {difficulty}</p>
+      )}
+
+      {grid.length > 0 && (
+        <div className="flex justify-center">
+          <div
+            className="grid gap-1"
+            style={{
+              gridTemplateColumns: `repeat(${grid.length}, 40px)`,
+            }}
+          >
+            {grid.map((row, rowIndex) =>
+              row.map((cell, colIndex) => (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className="h-10 w-10 border border-slate-500 bg-white"
+                />
+              )),
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
