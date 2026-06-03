@@ -62,7 +62,40 @@ function CreateLevelPage() {
     }
   };
 
+  const validateLevel = () => {
+    let playerCount = 0;
+    let exitCount = 0;
+
+    for (const row of grid) {
+      for (const tile of row) {
+        if (tile === "player") {
+          playerCount++;
+        }
+
+        if (tile === "exit") {
+          exitCount++;
+        }
+      }
+    }
+
+    if (playerCount !== 1) {
+      alert("Level must contain exactly 1 player.");
+      return false;
+    }
+
+    if (exitCount !== 1) {
+      alert("Level must contain exactly 1 exit.");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSaveLevel = () => {
+    if (!validateLevel()) {
+      return;
+    }
+
     if (!difficulty) return;
 
     const level: Level = {
