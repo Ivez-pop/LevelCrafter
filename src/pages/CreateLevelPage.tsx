@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DifficultySelector from "../components/DifficultySelector";
 import TilePalette from "../components/TilePalette";
 import type { Tile, Level } from "../types/level";
@@ -12,6 +13,8 @@ function CreateLevelPage() {
   const [grid, setGrid] = useState<Tile[][]>([]);
 
   const [selectedTile, setSelectedTile] = useState<Tile>("wall");
+
+  const navigate = useNavigate();
 
   const createGrid = (selectedDifficulty: "easy" | "medium" | "hard") => {
     setDifficulty(selectedDifficulty);
@@ -49,14 +52,19 @@ function CreateLevelPage() {
     switch (tile) {
       case "wall":
         return "bg-gray-500";
+
       case "coin":
         return "bg-yellow-400";
+
       case "hazard":
         return "bg-red-500";
+
       case "player":
         return "bg-green-500";
+
       case "exit":
         return "bg-blue-500";
+
       default:
         return "bg-white";
     }
@@ -154,19 +162,15 @@ function CreateLevelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
-      <h1 className="mb-8 text-center text-4xl font-bold">
-        Create Level
-      </h1>
+    <div className="min-h-screen bg-slate-950 p-8 text-white">
+      <h1 className="mb-8 text-center text-4xl font-bold">Create Level</h1>
 
       <div className="mb-8 flex justify-center">
         <DifficultySelector onSelect={createGrid} />
       </div>
 
       {difficulty && (
-        <p className="mb-6 text-center">
-          Difficulty: {difficulty}
-        </p>
+        <p className="mb-6 text-center">Difficulty: {difficulty}</p>
       )}
 
       {grid.length > 0 && (
@@ -176,9 +180,7 @@ function CreateLevelPage() {
             onSelect={handleTileSelect}
           />
 
-          <p className="mb-6 text-center">
-            Selected Tile: {selectedTile}
-          </p>
+          <p className="mb-6 text-center">Selected Tile: {selectedTile}</p>
 
           <div className="mb-6 flex flex-wrap justify-center gap-4">
             <button
@@ -200,6 +202,13 @@ function CreateLevelPage() {
               className="rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white hover:bg-purple-500"
             >
               Export JSON
+            </button>
+
+            <button
+              onClick={() => navigate("/play")}
+              className="rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-500"
+            >
+              Playtest
             </button>
           </div>
 
