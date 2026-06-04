@@ -130,6 +130,13 @@ function HomePage() {
             {session ? (
               <div className="flex flex-wrap justify-center gap-4">
                 <button
+                  onClick={() => navigate("/global-leaderboard")}
+                  className="arcade-button-yellow"
+                >
+                  Global Leaderboard
+                </button>
+
+                <button
                   onClick={() => navigate("/profile")}
                   className="arcade-button-violet"
                 >

@@ -7,8 +7,7 @@ import type {
 } from "../types/leaderboard";
 import type { Json } from "../types/supabase";
 import { calculateCompletionScore, updateBestScore } from "./scoreService";
-
-const DEVELOPMENT_USER_ID = "00000000-0000-4000-8000-000000000001";
+import { ensurePublicUserProfile, getAuthenticatedUser, resolveAuthenticatedUsername } from "./profileService";
 
 interface CompletedLevelInput {
   level: Level;
@@ -39,31 +38,15 @@ function mapGameplaySession(row: {
   };
 }
 
-function getCurrentGameplayUserId() {
-  return (import.meta.env.VITE_LEVELCRAFTER_USER_ID as string | undefined)
-    ?? DEVELOPMENT_USER_ID;
-}
-
-async function ensureLeaderboardReferences(level: Level, userId: string) {
+async function ensureAuthenticatedUserProfile(level: Level) {
   const supabase = getSupabaseClient();
-
-  const { error: userError } = await supabase
-    .from("users")
-    .upsert({
-      id: userId,
-      username: "dev-player",
-      display_name: "Dev Player",
-    }, { onConflict: "id" });
-
-  if (userError) {
-    throw userError;
-  }
+  const user = await getAuthenticatedUser();
+  await ensurePublicUserProfile(user);
 
   const { error: levelError } = await supabase
     .from("levels")
     .upsert({
       id: level.id,
-      owner_id: null,
       name: level.name,
       difficulty: level.difficulty,
       width: level.width,
@@ -77,6 +60,11 @@ async function ensureLeaderboardReferences(level: Level, userId: string) {
   if (levelError) {
     throw levelError;
   }
+
+  return {
+    id: user.id,
+    username: resolveAuthenticatedUsername(user),
+  };
 }
 
 export async function storeGameplaySession(run: CompletedGameplayRunInput) {
@@ -149,14 +137,12 @@ export async function recordCompletedLevel({
   moves,
   timeSeconds,
 }: CompletedLevelInput) {
-  const userId = getCurrentGameplayUserId();
+  const { id: userId } = await ensureAuthenticatedUserProfile(level);
   const score = calculateCompletionScore({
     coinsCollected,
     moves,
     timeSeconds,
   });
-
-  await ensureLeaderboardReferences(level, userId);
 
   return recordCompletedRun({
     userId,
