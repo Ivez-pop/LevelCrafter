@@ -9,6 +9,7 @@ import { GameStatus } from "../features/play/components/GameStatus";
 import { LeaderboardPlaceholder } from "../features/play/components/LeaderboardPlaceholder";
 import { useGameTimer } from "../hooks/useGameTimer";
 import type { Level } from "../types/level";
+import { importLevelFromJson } from "../services/levelStorage";
 
 const getTileStyle = (tile: Tile) => {
   switch (tile) {
@@ -51,21 +52,39 @@ function PlayPage() {
 
   useKeyboardControls(game.move);
 
+  const handleImportJson = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    try {
+      await importLevelFromJson(file);
+
+      alert("Level imported successfully!");
+
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Invalid level file!");
+    }
+  };
+
   const renderedGrid =
     game.level?.grid.map((row: Tile[], rowIndex: number) =>
       row.map((cell: Tile, colIndex: number) => {
         if (game.player?.x === colIndex && game.player?.y === rowIndex) {
           return "player" as Tile;
         }
+
         return cell;
       }),
     ) ?? [];
 
   return (
     <div className="arcade-screen">
-      <h1 className="arcade-title mb-6">
-        PLAY LEVELS
-      </h1>
+      <h1 className="arcade-title mb-6">PLAY LEVELS</h1>
 
       {!game.level ? (
         <div className="mx-auto max-w-5xl">
@@ -76,6 +95,18 @@ function PlayPage() {
               message={game.message}
               onSelectDifficulty={game.loadGame}
             />
+
+            <div className="mt-4">
+              <label className="arcade-button-violet cursor-pointer">
+                IMPORT JSON
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportJson}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
 
           <div className="mt-8">
@@ -84,6 +115,7 @@ function PlayPage() {
               onPlayLevel={game.handlePlayLevel}
               onOpenLeaderboard={setLeaderboardLevel}
             />
+
             {leaderboardLevel ? (
               <LeaderboardPlaceholder
                 level={leaderboardLevel}
@@ -94,24 +126,12 @@ function PlayPage() {
         </div>
       ) : (
         <div className="arcade-shell">
-          <div
-            className="
-              arcade-panel
-              mb-6
-              grid
-              grid-cols-1
-              gap-4
-              p-4
-              sm:grid-cols-4
-            "
-          >
+          <div className="arcade-panel mb-6 grid grid-cols-1 gap-4 p-4 sm:grid-cols-4">
             <div className="arcade-chip text-yellow-300">
               LEVEL: {game.level.name}
             </div>
 
-            <div className="arcade-chip text-fuchsia-300">
-              TIME: {timer}
-            </div>
+            <div className="arcade-chip text-fuchsia-300">TIME: {timer}</div>
 
             <div className="arcade-chip text-cyan-300">
               COINS: {game.collected}
@@ -122,24 +142,8 @@ function PlayPage() {
             </div>
           </div>
 
-          <div
-            className="
-              arcade-panel
-              flex
-              justify-center
-              p-3
-              sm:p-8
-            "
-          >
-            <div
-              className="
-                arcade-panel-deep
-                max-w-full
-                overflow-x-auto
-                p-3
-                sm:p-6
-              "
-            >
+          <div className="arcade-panel flex justify-center p-3 sm:p-8">
+            <div className="arcade-panel-deep max-w-full overflow-x-auto p-3 sm:p-6">
               <GameBoard
                 width={game.level.width}
                 grid={renderedGrid}
@@ -152,7 +156,9 @@ function PlayPage() {
           <div className="arcade-panel mt-6 p-4">
             <GameStatus
               status={game.status}
-              onPlayAgain={() => game.level && game.handlePlayLevel(game.level.id)}
+              onPlayAgain={() =>
+                game.level && game.handlePlayLevel(game.level.id)
+              }
               onReturnToLevelSelection={() =>
                 game.difficulty && game.loadGame(game.difficulty)
               }

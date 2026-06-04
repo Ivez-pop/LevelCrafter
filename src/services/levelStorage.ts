@@ -34,7 +34,7 @@ export function saveLevel(level: Omit<Level, "id" | "createdAt">): string {
     id,
     createdAt,
     ...level,
-  } as Level;
+  };
 
   all.push(newLevel);
 
@@ -44,15 +44,29 @@ export function saveLevel(level: Omit<Level, "id" | "createdAt">): string {
 }
 
 export function getLevelsByDifficulty(difficulty: "easy" | "medium" | "hard") {
-  return readAll().filter((l) => l.difficulty === difficulty);
+  return readAll().filter((level) => level.difficulty === difficulty);
 }
 
 export function getLevelById(id: string): Level | null {
   const all = readAll();
 
-  return all.find((l) => l.id === id) ?? null;
+  return all.find((level) => level.id === id) ?? null;
 }
 
 export function importLevel(level: Omit<Level, "id" | "createdAt">): string {
   return saveLevel(level);
+}
+
+export async function importLevelFromJson(file: File): Promise<string> {
+  const text = await file.text();
+
+  const importedLevel = JSON.parse(text);
+
+  return saveLevel({
+    name: importedLevel.name,
+    difficulty: importedLevel.difficulty,
+    width: importedLevel.width,
+    height: importedLevel.height,
+    grid: importedLevel.grid,
+  });
 }
