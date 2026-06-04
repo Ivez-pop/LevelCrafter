@@ -1,5 +1,8 @@
 import type { Tile } from "../types/level";
 import { difficultySizes } from "../constants/difficulty";
+import { editorTiles } from "../constants/tiles";
+
+const allowedTiles = new Set<Tile>(editorTiles);
 
 export const validateLevel = (
   levelName: string,
@@ -29,6 +32,11 @@ export const validateLevel = (
     }
 
     for (const tile of row) {
+      if (!allowedTiles.has(tile)) {
+        alert("Grid contains an unknown tile.");
+        return false;
+      }
+
       if (tile === "player") {
         playerCount++;
       }

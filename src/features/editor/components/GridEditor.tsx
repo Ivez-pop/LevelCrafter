@@ -1,59 +1,22 @@
+import { useState } from "react";
 import type { Tile } from "../../../types/level";
+import { tileIcons, tileStyles } from "../../../constants/tiles";
 
 interface GridEditorProps {
   grid: Tile[][];
-  onCellClick: (rowIndex: number, colIndex: number) => void;
+  onPaintCell: (rowIndex: number, colIndex: number) => void;
 }
 
-function GridEditor({ grid, onCellClick }: GridEditorProps) {
-  const getTileStyle = (tile: Tile) => {
-    switch (tile) {
-      case "wall":
-        return "bg-[#4b5563]";
-
-      case "coin":
-        return "bg-[#ffd83d]";
-
-      case "hazard":
-        return "bg-[#ff3d57]";
-
-      case "player":
-        return "bg-[#43ff8f]";
-
-      case "exit":
-        return "bg-[#39dfff]";
-
-      default:
-        return "bg-[#e9f7ff]";
-    }
-  };
-
-  const getTileIcon = (tile: Tile) => {
-    switch (tile) {
-      case "wall":
-        return "🧱";
-
-      case "coin":
-        return "🪙";
-
-      case "hazard":
-        return "🔥";
-
-      case "player":
-        return "😎";
-
-      case "exit":
-        return "🚪";
-
-      default:
-        return "";
-    }
-  };
-
+function GridEditor({ grid, onPaintCell }: GridEditorProps) {
+  const [isPainting, setIsPainting] = useState(false);
   const tileSize = grid.length <= 5 ? 72 : grid.length <= 8 ? 60 : 48;
 
   return (
-    <div className="flex max-w-full items-center justify-center overflow-auto p-1">
+    <div
+      className="flex max-w-full touch-none items-center justify-center overflow-auto p-1"
+      onPointerLeave={() => setIsPainting(false)}
+      onPointerUp={() => setIsPainting(false)}
+    >
       <div
         className="grid gap-1"
         style={{
@@ -64,21 +27,32 @@ function GridEditor({ grid, onCellClick }: GridEditorProps) {
           row.map((cell, colIndex) => (
             <button
               key={`${rowIndex}-${colIndex}`}
-              onClick={() => onCellClick(rowIndex, colIndex)}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                setIsPainting(true);
+                onPaintCell(rowIndex, colIndex);
+              }}
+              onPointerEnter={() => {
+                if (isPainting) {
+                  onPaintCell(rowIndex, colIndex);
+                }
+              }}
               className={`
                 flex
                 items-center
                 justify-center
-                text-4xl
+                text-lg
+                font-mono
+                font-black
                 arcade-tile
-                ${getTileStyle(cell)}
+                ${tileStyles[cell]}
               `}
               style={{
                 width: tileSize,
                 height: tileSize,
               }}
             >
-              {getTileIcon(cell)}
+              {tileIcons[cell]}
             </button>
           )),
         )}

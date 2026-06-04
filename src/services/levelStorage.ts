@@ -1,4 +1,5 @@
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
+import { editorTiles } from "../constants/tiles";
 import type { Level, Tile } from "../types/level";
 
 const STORAGE_KEY = "levelcrafter.levels";
@@ -58,14 +59,7 @@ export function importLevel(level: Omit<Level, "id" | "createdAt">): string {
   return saveLevel(level);
 }
 
-const allowedTiles = new Set<Tile>([
-  "empty",
-  "wall",
-  "coin",
-  "hazard",
-  "player",
-  "exit",
-]);
+const allowedTiles = new Set<Tile>(editorTiles);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -173,4 +167,20 @@ export async function importLevelFromJson(file: File): Promise<string> {
   const text = await file.text();
 
   return saveLevel(normalizeImportedLevel(JSON.parse(text)));
+}
+
+export function encodeLevelCode(level: Omit<Level, "id" | "createdAt">): string {
+  const json = JSON.stringify(normalizeImportedLevel(level));
+  const bytes = new TextEncoder().encode(json);
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+
+  return btoa(binary);
+}
+
+export function importLevelFromCode(code: string): string {
+  const binary = atob(code.trim());
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const json = new TextDecoder().decode(bytes);
+
+  return saveLevel(normalizeImportedLevel(JSON.parse(json)));
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ChangeEvent } from "react";
 import type { Tile } from "../types/level";
 import { useGame } from "../features/play/hooks/useGame";
 import { useKeyboardControls } from "../features/play/hooks/useKeyboardControls";
@@ -9,71 +10,54 @@ import { GameStatus } from "../features/play/components/GameStatus";
 import { LeaderboardPlaceholder } from "../features/play/components/LeaderboardPlaceholder";
 import { useGameTimer } from "../hooks/useGameTimer";
 import type { Level } from "../types/level";
-import { getLevelById, importLevelFromJson } from "../services/levelStorage";
-
-const getTileStyle = (tile: Tile) => {
-  switch (tile) {
-    case "wall":
-      return "bg-[#4b5563]";
-    case "coin":
-      return "bg-[#ffd83d]";
-    case "hazard":
-      return "bg-[#ff3d57]";
-    case "player":
-      return "bg-[#43ff8f]";
-    case "exit":
-      return "bg-[#39dfff]";
-    default:
-      return "bg-[#e9f7ff]";
-  }
-};
-
-const getTileIcon = (tile: Tile) => {
-  switch (tile) {
-    case "wall":
-      return "🧱";
-    case "coin":
-      return "🪙";
-    case "hazard":
-      return "🔥";
-    case "player":
-      return "😎";
-    case "exit":
-      return "🚪";
-    default:
-      return "";
-  }
-};
+import {
+  getLevelById,
+  importLevelFromCode,
+  importLevelFromJson,
+} from "../services/levelStorage";
+import { tileIcons, tileStyles } from "../constants/tiles";
 
 function PlayPage() {
   const game = useGame();
   const timer = useGameTimer(game.level?.id ?? null, game.status);
   const [leaderboardLevel, setLeaderboardLevel] = useState<Level | null>(null);
+  const [levelCode, setLevelCode] = useState("");
 
   useKeyboardControls(game.move);
 
-  const handleImportJson = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const startImportedLevel = (importedLevelId: string) => {
+    const importedLevel = getLevelById(importedLevelId);
+
+    if (!importedLevel) {
+      throw new Error("Imported level could not be loaded.");
+    }
+
+    game.loadGame(importedLevel.difficulty);
+    game.handlePlayLevel(importedLevelId);
+  };
+
+  const handleImportJson = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
     try {
-      const importedLevelId = await importLevelFromJson(file);
-      const importedLevel = getLevelById(importedLevelId);
-
-      if (!importedLevel) {
-        throw new Error("Imported level could not be loaded.");
-      }
-
-      game.loadGame(importedLevel.difficulty);
-      game.handlePlayLevel(importedLevelId);
+      startImportedLevel(await importLevelFromJson(file));
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Invalid level file!");
     } finally {
       event.target.value = "";
+    }
+  };
+
+  const handleImportCode = () => {
+    try {
+      startImportedLevel(importLevelFromCode(levelCode));
+      setLevelCode("");
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Invalid level code!");
     }
   };
 
@@ -112,6 +96,22 @@ function PlayPage() {
                   className="hidden"
                 />
               </label>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <textarea
+                value={levelCode}
+                onChange={(event) => setLevelCode(event.target.value)}
+                placeholder="Paste share code"
+                className="arcade-input min-h-20 text-xs"
+              />
+              <button
+                onClick={handleImportCode}
+                disabled={!levelCode.trim()}
+                className="arcade-button-cyan disabled:opacity-50"
+              >
+                Import Code
+              </button>
             </div>
           </div>
 
@@ -153,8 +153,8 @@ function PlayPage() {
               <GameBoard
                 width={game.level.width}
                 grid={renderedGrid}
-                getTileStyle={getTileStyle}
-                getTileIcon={getTileIcon}
+                getTileStyle={(tile) => tileStyles[tile]}
+                getTileIcon={(tile) => tileIcons[tile]}
               />
             </div>
           </div>

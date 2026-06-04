@@ -1,8 +1,36 @@
 @import "tailwindcss";
 
 @layer components {
+  :root {
+    --screen-bg: #16113f;
+    --panel-bg: #2b2368;
+    --panel-deep-bg: #0f172a;
+    --chip-bg: #12122f;
+    --grid-line: rgba(255, 255, 255, 0.04);
+  }
+
+  :root[data-theme="candy"] {
+    --screen-bg: #4f123f;
+    --panel-bg: #7c2d61;
+    --panel-deep-bg: #2f172d;
+    --chip-bg: #34123a;
+    --grid-line: rgba(255, 255, 255, 0.08);
+  }
+
+  :root[data-theme="terminal"] {
+    --screen-bg: #062316;
+    --panel-bg: #10412b;
+    --panel-deep-bg: #03150d;
+    --chip-bg: #082115;
+    --grid-line: rgba(163, 230, 53, 0.1);
+  }
+
   .arcade-screen {
     @apply min-h-screen bg-[#16113f] bg-[linear-gradient(0deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:24px_24px] p-4 text-white sm:p-6;
+    background-color: var(--screen-bg);
+    background-image:
+      linear-gradient(0deg, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   }
 
   .arcade-shell {
@@ -19,14 +47,17 @@
 
   .arcade-panel {
     @apply border-4 border-black bg-[#2b2368] shadow-[8px_8px_0px_#000,inset_0_0_0_4px_rgba(255,255,255,0.08)];
+    background-color: var(--panel-bg);
   }
 
   .arcade-panel-deep {
     @apply border-4 border-black bg-[#0f172a] shadow-[6px_6px_0px_#000];
+    background-color: var(--panel-deep-bg);
   }
 
   .arcade-chip {
     @apply border-2 border-black bg-[#12122f] px-3 py-2 text-center font-mono text-sm font-black uppercase shadow-[3px_3px_0px_#000];
+    background-color: var(--chip-bg);
   }
 
   .arcade-section-label {
