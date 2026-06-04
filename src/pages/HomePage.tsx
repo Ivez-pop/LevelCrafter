@@ -1,19 +1,18 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import LogoutButton from "../components/LogoutButton";
 
 function HomePage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   return (
     <div className="arcade-screen flex items-center justify-center">
       <div className="arcade-shell">
         <div className="mb-10 text-center sm:mb-12">
-          <p className="arcade-kicker mb-4">
-            Welcome to
-          </p>
+          <p className="arcade-kicker mb-4">Welcome to</p>
 
-          <h1 className="arcade-title text-5xl md:text-7xl">
-            LevelCrafter
-          </h1>
+          <h1 className="arcade-title text-5xl md:text-7xl">LevelCrafter</h1>
 
           <p className="mx-auto mt-5 max-w-2xl font-mono text-sm font-black uppercase leading-7 text-cyan-200 sm:text-base">
             Create, save, and play custom puzzle levels
@@ -32,8 +31,7 @@ function HomePage() {
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <div
                 className="
-                  flex items-center justify-center
-                  h-16 w-16 shrink-0
+                  flex h-16 w-16 shrink-0 items-center justify-center
                   border-4 border-black
                   bg-rose-400
                   text-black
@@ -83,8 +81,7 @@ function HomePage() {
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <div
                 className="
-                  flex items-center justify-center
-                  h-16 w-16 shrink-0
+                  flex h-16 w-16 shrink-0 items-center justify-center
                   border-4 border-black
                   bg-cyan-300
                   text-black
@@ -128,6 +125,37 @@ function HomePage() {
           <p className="font-mono text-xs font-black uppercase tracking-[0.25em] text-yellow-200">
             Build / Create / Play
           </p>
+
+          <div className="mt-6 flex justify-center">
+            {session ? (
+              <div className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="arcade-button-violet"
+                >
+                  My Profile
+                </button>
+
+                <LogoutButton />
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => navigate("/login")}
+                  className="arcade-button-cyan"
+                >
+                  Login
+                </button>
+
+                <button
+                  onClick={() => navigate("/register")}
+                  className="arcade-button-yellow"
+                >
+                  Register
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
