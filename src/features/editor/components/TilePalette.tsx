@@ -1,4 +1,5 @@
 import type { Tile } from "../../../types/level";
+import { editorTiles, tileLabels } from "../../../constants/tiles";
 
 interface TilePaletteProps {
   selectedTile: Tile;
@@ -6,19 +7,9 @@ interface TilePaletteProps {
 }
 
 function TilePalette({ selectedTile, onSelect }: TilePaletteProps) {
-  const tiles: Tile[] = ["wall", "coin", "hazard", "player", "exit", "empty"];
-  const tileLabels: Record<Tile, string> = {
-    wall: "Wall",
-    coin: "Coin",
-    hazard: "Hazard",
-    player: "Player",
-    exit: "Exit",
-    empty: "Empty",
-  };
-
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
-      {tiles.map((tile) => (
+      {editorTiles.map((tile) => (
         <button
           key={tile}
           onClick={() => onSelect(tile)}

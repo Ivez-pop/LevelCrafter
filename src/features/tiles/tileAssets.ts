@@ -39,6 +39,26 @@ const tileAssets: Record<Tile, TileAsset> = {
     alt: "Hazard tile",
     hasFloor: true,
   },
+  enemyHorizontal: {
+    src: hazard,
+    alt: "Horizontal enemy tile",
+    hasFloor: true,
+  },
+  enemyVertical: {
+    src: hazard,
+    alt: "Vertical enemy tile",
+    hasFloor: true,
+  },
+  movingHazardHorizontal: {
+    src: hazard,
+    alt: "Horizontal moving hazard tile",
+    hasFloor: true,
+  },
+  movingHazardVertical: {
+    src: hazard,
+    alt: "Vertical moving hazard tile",
+    hasFloor: true,
+  },
   player: {
     src: player,
     alt: "Player tile",

@@ -1,4 +1,5 @@
 import type { Tile } from "../types/level";
+import { isDynamicDangerTile } from "../constants/tiles";
 
 export type GameResult =
   | "continue"
@@ -9,6 +10,10 @@ export type GameResult =
 export function evaluateTile(
   tile: Tile
 ): GameResult {
+
+  if (isDynamicDangerTile(tile)) {
+    return "restart";
+  }
 
   switch (tile) {
 

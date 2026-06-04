@@ -7,10 +7,12 @@ import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 import GlobalLeaderboardPage from "./pages/GlobalLeaderboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { ThemeSelector } from "./shared/components/ThemeSelector";
 
 function App() {
   return (
     <BrowserRouter>
+      <ThemeSelector />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/create" element={<CreateLevelPage />} />

@@ -1,16 +1,22 @@
+import { useState } from "react";
 import type { Tile } from "../../../types/level";
 import { TileArtwork } from "../../tiles/TileArtwork";
 
 interface GridEditorProps {
   grid: Tile[][];
-  onCellClick: (rowIndex: number, colIndex: number) => void;
+  onPaintCell: (rowIndex: number, colIndex: number) => void;
 }
 
-function GridEditor({ grid, onCellClick }: GridEditorProps) {
+function GridEditor({ grid, onPaintCell }: GridEditorProps) {
+  const [isPainting, setIsPainting] = useState(false);
   const tileSize = grid.length <= 5 ? 72 : grid.length <= 8 ? 60 : 48;
 
   return (
-    <div className="flex max-w-full items-center justify-center overflow-auto p-0.5">
+    <div
+      className="flex max-w-full touch-none items-center justify-center overflow-auto p-1"
+      onPointerLeave={() => setIsPainting(false)}
+      onPointerUp={() => setIsPainting(false)}
+    >
       <div
         className="grid gap-0 bg-black"
         style={{
@@ -21,8 +27,23 @@ function GridEditor({ grid, onCellClick }: GridEditorProps) {
           row.map((cell, colIndex) => (
             <button
               key={`${rowIndex}-${colIndex}`}
-              onClick={() => onCellClick(rowIndex, colIndex)}
-              className="arcade-tile overflow-hidden"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                setIsPainting(true);
+                onPaintCell(rowIndex, colIndex);
+              }}
+              onPointerEnter={() => {
+                if (isPainting) {
+                  onPaintCell(rowIndex, colIndex);
+                }
+              }}
+              className={`
+                flex
+                items-center
+                justify-center
+                arcade-tile
+                overflow-hidden
+              `}
               style={{
                 width: tileSize,
                 height: tileSize,

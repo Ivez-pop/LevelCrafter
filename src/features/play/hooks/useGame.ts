@@ -6,6 +6,91 @@ import { processMove } from "../../../game/gameEngine";
 import { getPlayerStart } from "../../../game/spawn";
 import { getLevelsByDifficulty, getLevelById } from "../../../services/levelStorage";
 import { recordCompletedLevel } from "../../../services/gameplayService";
+import { isDynamicDangerTile } from "../../../constants/tiles";
+
+type DynamicDirection = { dx: number; dy: number };
+
+const getDynamicDirection = (tile: Tile): DynamicDirection => ({
+  dx:
+    tile === "enemyHorizontal" || tile === "movingHazardHorizontal" ? 1 : 0,
+  dy:
+    tile === "enemyVertical" || tile === "movingHazardVertical" ? 1 : 0,
+});
+
+function advanceDynamicDangers(
+  grid: Tile[][],
+  player: Position,
+  directions: Map<string, DynamicDirection>,
+) {
+  const nextGrid = grid.map((row) => [...row]);
+  const dangers: Array<{
+    x: number;
+    y: number;
+    tile: Tile;
+    direction: DynamicDirection;
+  }> = [];
+
+  for (let y = 0; y < nextGrid.length; y++) {
+    for (let x = 0; x < nextGrid[y].length; x++) {
+      const tile = nextGrid[y][x];
+
+      if (isDynamicDangerTile(tile)) {
+        dangers.push({
+          x,
+          y,
+          tile,
+          direction: directions.get(`${x},${y}`) ?? getDynamicDirection(tile),
+        });
+        nextGrid[y][x] = "empty";
+      }
+    }
+  }
+
+  const isBlocked = (x: number, y: number) =>
+    y < 0 ||
+    y >= nextGrid.length ||
+    x < 0 ||
+    x >= nextGrid[y].length ||
+    nextGrid[y][x] !== "empty" ||
+    dangers.some((danger) => danger.x === x && danger.y === y);
+
+  for (const danger of dangers) {
+    let nextX = danger.x + danger.direction.dx;
+    let nextY = danger.y + danger.direction.dy;
+
+    if (isBlocked(nextX, nextY)) {
+      danger.direction = {
+        dx: -danger.direction.dx,
+        dy: -danger.direction.dy,
+      };
+      nextX = danger.x + danger.direction.dx;
+      nextY = danger.y + danger.direction.dy;
+    }
+
+    if (!isBlocked(nextX, nextY)) {
+      danger.x = nextX;
+      danger.y = nextY;
+    }
+  }
+
+  for (const danger of dangers) {
+    nextGrid[danger.y][danger.x] = danger.tile;
+  }
+
+  const nextDirections = new Map<string, DynamicDirection>();
+
+  for (const danger of dangers) {
+    nextDirections.set(`${danger.x},${danger.y}`, danger.direction);
+  }
+
+  return {
+    grid: nextGrid,
+    directions: nextDirections,
+    hitPlayer: dangers.some(
+      (danger) => danger.x === player.x && danger.y === player.y,
+    ),
+  };
+}
 
 export function useGame(): GameState & GameActions {
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
@@ -16,6 +101,7 @@ export function useGame(): GameState & GameActions {
   const [moves, setMoves] = useState(0);
   const movesRef = useRef(0);
   const startedAtRef = useRef<number | null>(null);
+  const dynamicDirectionsRef = useRef(new Map<string, DynamicDirection>());
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const [message, setMessage] = useState("");
 
@@ -36,6 +122,7 @@ export function useGame(): GameState & GameActions {
     setCollected(0);
     movesRef.current = 0;
     startedAtRef.current = null;
+    dynamicDirectionsRef.current = new Map();
     setMoves(0);
     setStatus("idle");
     setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
@@ -60,6 +147,7 @@ export function useGame(): GameState & GameActions {
     setCollected(0);
     movesRef.current = 0;
     startedAtRef.current = Date.now();
+    dynamicDirectionsRef.current = new Map();
     setMoves(0);
     setStatus("restart");
     setMessage("Hazard hit! Level restarted.");
@@ -98,20 +186,26 @@ export function useGame(): GameState & GameActions {
     }
 
     if (result.event === "collect") {
-      setLevel((current: Level | null) => {
-        if (!current) return current;
+      const updatedGrid = level.grid.map((row: Tile[], rowIndex: number) =>
+        row.map((tile: Tile, colIndex: number) =>
+          rowIndex === nextPosition.y && colIndex === nextPosition.x
+            ? "empty"
+            : tile,
+        ),
+      );
+      const advanced = advanceDynamicDangers(
+        updatedGrid,
+        nextPosition,
+        dynamicDirectionsRef.current,
+      );
 
-        const updatedGrid = current.grid.map((row: Tile[], rowIndex: number) =>
-          row.map((tile: Tile, colIndex: number) =>
-            rowIndex === nextPosition.y && colIndex === nextPosition.x
-              ? "empty"
-              : tile,
-          ),
-        );
+      if (advanced.hitPlayer) {
+        resetGame();
+        return;
+      }
 
-        return { ...current, grid: updatedGrid };
-      });
-
+      dynamicDirectionsRef.current = advanced.directions;
+      setLevel({ ...level, grid: advanced.grid });
       setCollected((count) => count + 1);
       setPlayer(nextPosition);
       setStatus("collect");
@@ -140,6 +234,19 @@ export function useGame(): GameState & GameActions {
       return;
     }
 
+    const advanced = advanceDynamicDangers(
+      level.grid,
+      nextPosition,
+      dynamicDirectionsRef.current,
+    );
+
+    if (advanced.hitPlayer) {
+      resetGame();
+      return;
+    }
+
+    dynamicDirectionsRef.current = advanced.directions;
+    setLevel({ ...level, grid: advanced.grid });
     setPlayer(nextPosition);
     setStatus("continue");
     setMessage("");
@@ -160,6 +267,7 @@ export function useGame(): GameState & GameActions {
       setCollected(0);
       movesRef.current = 0;
       startedAtRef.current = Date.now();
+      dynamicDirectionsRef.current = new Map();
       setMoves(0);
       setStatus("continue");
       setMessage(`Playing ${lvl.name}`);

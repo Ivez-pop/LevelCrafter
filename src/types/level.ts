@@ -3,6 +3,10 @@ export type Tile =
   | "wall"
   | "coin"
   | "hazard"
+  | "enemyHorizontal"
+  | "enemyVertical"
+  | "movingHazardHorizontal"
+  | "movingHazardVertical"
   | "player"
   | "exit";
 
