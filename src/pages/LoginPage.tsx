@@ -21,7 +21,7 @@ function LoginPage() {
 
     alert("Login successful!");
 
-    navigate("/");
+    navigate("/profile");
   };
 
   return (
