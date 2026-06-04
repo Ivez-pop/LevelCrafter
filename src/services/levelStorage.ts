@@ -1,4 +1,5 @@
-import type { Level } from "../types/level";
+import { difficultySizes, type Difficulty } from "../constants/difficulty";
+import type { Level, Tile } from "../types/level";
 
 const STORAGE_KEY = "levelcrafter.levels";
 
@@ -57,16 +58,119 @@ export function importLevel(level: Omit<Level, "id" | "createdAt">): string {
   return saveLevel(level);
 }
 
+const allowedTiles = new Set<Tile>([
+  "empty",
+  "wall",
+  "coin",
+  "hazard",
+  "player",
+  "exit",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeDifficulty(value: unknown, gridSize: number): Difficulty {
+  if (
+    value === "easy" ||
+    value === "medium" ||
+    value === "hard"
+  ) {
+    return value;
+  }
+
+  const inferred = Object.entries(difficultySizes).find(
+    ([, size]) => size === gridSize,
+  )?.[0];
+
+  if (
+    inferred === "easy" ||
+    inferred === "medium" ||
+    inferred === "hard"
+  ) {
+    return inferred;
+  }
+
+  throw new Error("Level difficulty is missing or invalid.");
+}
+
+function normalizeGrid(value: unknown): Tile[][] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Level grid is missing or empty.");
+  }
+
+  let playerCount = 0;
+  let exitCount = 0;
+  const width = Array.isArray(value[0]) ? value[0].length : 0;
+
+  if (width === 0) {
+    throw new Error("Level grid rows must contain tiles.");
+  }
+
+  const grid = value.map((row) => {
+    if (!Array.isArray(row) || row.length !== width) {
+      throw new Error("Level grid must be rectangular.");
+    }
+
+    return row.map((tile) => {
+      if (!allowedTiles.has(tile as Tile)) {
+        throw new Error("Level grid contains an unknown tile.");
+      }
+
+      if (tile === "player") {
+        playerCount++;
+      }
+
+      if (tile === "exit") {
+        exitCount++;
+      }
+
+      return tile as Tile;
+    });
+  });
+
+  if (grid.length !== width) {
+    throw new Error("Level grid must be square.");
+  }
+
+  if (playerCount !== 1) {
+    throw new Error("Level must contain exactly one player.");
+  }
+
+  if (exitCount !== 1) {
+    throw new Error("Level must contain exactly one exit.");
+  }
+
+  return grid;
+}
+
+function normalizeImportedLevel(value: unknown): Omit<Level, "id" | "createdAt"> {
+  if (!isRecord(value)) {
+    throw new Error("Level file must contain a JSON object.");
+  }
+
+  const grid = normalizeGrid(value.grid);
+  const difficulty = normalizeDifficulty(value.difficulty, grid.length);
+  const expectedSize = difficultySizes[difficulty];
+
+  if (grid.length !== expectedSize) {
+    throw new Error(`Level grid must be ${expectedSize}x${expectedSize}.`);
+  }
+
+  const name = typeof value.name === "string" ? value.name.trim() : "";
+
+  return {
+    name: name || "Imported Level",
+    difficulty,
+    width: grid[0].length,
+    height: grid.length,
+    grid,
+  };
+}
+
 export async function importLevelFromJson(file: File): Promise<string> {
   const text = await file.text();
 
-  const importedLevel = JSON.parse(text);
-
-  return saveLevel({
-    name: importedLevel.name,
-    difficulty: importedLevel.difficulty,
-    width: importedLevel.width,
-    height: importedLevel.height,
-    grid: importedLevel.grid,
-  });
+  return saveLevel(normalizeImportedLevel(JSON.parse(text)));
 }

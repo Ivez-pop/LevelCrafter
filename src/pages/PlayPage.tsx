@@ -9,7 +9,7 @@ import { GameStatus } from "../features/play/components/GameStatus";
 import { LeaderboardPlaceholder } from "../features/play/components/LeaderboardPlaceholder";
 import { useGameTimer } from "../hooks/useGameTimer";
 import type { Level } from "../types/level";
-import { importLevelFromJson } from "../services/levelStorage";
+import { getLevelById, importLevelFromJson } from "../services/levelStorage";
 
 const getTileStyle = (tile: Tile) => {
   switch (tile) {
@@ -60,14 +60,20 @@ function PlayPage() {
     if (!file) return;
 
     try {
-      await importLevelFromJson(file);
+      const importedLevelId = await importLevelFromJson(file);
+      const importedLevel = getLevelById(importedLevelId);
 
-      alert("Level imported successfully!");
+      if (!importedLevel) {
+        throw new Error("Imported level could not be loaded.");
+      }
 
-      window.location.reload();
+      game.loadGame(importedLevel.difficulty);
+      game.handlePlayLevel(importedLevelId);
     } catch (err) {
       console.error(err);
-      alert("Invalid level file!");
+      alert(err instanceof Error ? err.message : "Invalid level file!");
+    } finally {
+      event.target.value = "";
     }
   };
 
