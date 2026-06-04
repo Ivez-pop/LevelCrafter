@@ -5,7 +5,9 @@ const STORAGE_KEY = "levelcrafter.levels";
 function readAll(): Level[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+
     if (!raw) return [];
+
     return JSON.parse(raw) as Level[];
   } catch {
     return [];
@@ -17,8 +19,9 @@ function writeAll(levels: Level[]) {
 }
 
 function genId() {
-  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)
-    .toString(36)}`;
+  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(
+    36,
+  )}`;
 }
 
 export function saveLevel(level: Omit<Level, "id" | "createdAt">): string {
@@ -34,6 +37,7 @@ export function saveLevel(level: Omit<Level, "id" | "createdAt">): string {
   } as Level;
 
   all.push(newLevel);
+
   writeAll(all);
 
   return id;
@@ -45,5 +49,10 @@ export function getLevelsByDifficulty(difficulty: "easy" | "medium" | "hard") {
 
 export function getLevelById(id: string): Level | null {
   const all = readAll();
+
   return all.find((l) => l.id === id) ?? null;
+}
+
+export function importLevel(level: Omit<Level, "id" | "createdAt">): string {
+  return saveLevel(level);
 }
