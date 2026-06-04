@@ -9,40 +9,7 @@ import { GameStatus } from "../features/play/components/GameStatus";
 import { LeaderboardPlaceholder } from "../features/play/components/LeaderboardPlaceholder";
 import { useGameTimer } from "../hooks/useGameTimer";
 import type { Level } from "../types/level";
-
-const getTileStyle = (tile: Tile) => {
-  switch (tile) {
-    case "wall":
-      return "bg-[#4b5563]";
-    case "coin":
-      return "bg-[#ffd83d]";
-    case "hazard":
-      return "bg-[#ff3d57]";
-    case "player":
-      return "bg-[#43ff8f]";
-    case "exit":
-      return "bg-[#39dfff]";
-    default:
-      return "bg-[#e9f7ff]";
-  }
-};
-
-const getTileIcon = (tile: Tile) => {
-  switch (tile) {
-    case "wall":
-      return "🧱";
-    case "coin":
-      return "🪙";
-    case "hazard":
-      return "🔥";
-    case "player":
-      return "😎";
-    case "exit":
-      return "🚪";
-    default:
-      return "";
-  }
-};
+import { getTileStyle } from "../features/tiles/tileAssets";
 
 function PlayPage() {
   const game = useGame();
@@ -144,7 +111,6 @@ function PlayPage() {
                 width={game.level.width}
                 grid={renderedGrid}
                 getTileStyle={getTileStyle}
-                getTileIcon={getTileIcon}
               />
             </div>
           </div>
