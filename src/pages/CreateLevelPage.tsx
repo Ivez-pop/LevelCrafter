@@ -5,6 +5,7 @@ import GridEditor from "../features/editor/components/GridEditor";
 import TilePalette from "../features/editor/components/TilePalette";
 import type { Tile } from "../types/level";
 import { saveLevel } from "../services/levelStorage";
+import { publishCreatedLevel } from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
 
@@ -43,7 +44,7 @@ function CreateLevelPage() {
     setGrid(updatedGrid);
   };
 
-  const handleSaveLevel = () => {
+  const handleSaveLevel = async () => {
     if (!validateLevel(levelName, grid, difficulty, setSaveError)) {
       return;
     }
@@ -56,6 +57,18 @@ function CreateLevelPage() {
       width: grid.length,
       height: grid.length,
       grid,
+    });
+
+    void publishCreatedLevel({
+      id,
+      name: levelName.trim(),
+      difficulty,
+      width: grid.length,
+      height: grid.length,
+      createdAt: Date.now(),
+      grid,
+    }).catch((error: unknown) => {
+      console.error("[CreateLevelPage] failed to publish created level", error);
     });
 
     alert(`Level saved! id: ${id}`);

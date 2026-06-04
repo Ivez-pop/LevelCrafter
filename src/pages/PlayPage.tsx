@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Tile } from "../types/level";
 import { useGame } from "../features/play/hooks/useGame";
 import { useKeyboardControls } from "../features/play/hooks/useKeyboardControls";
@@ -5,6 +6,9 @@ import { GameBoard } from "../features/play/components/GameBoard";
 import { GameControls } from "../features/play/components/GameControls";
 import { LevelList } from "../features/play/components/LevelList";
 import { GameStatus } from "../features/play/components/GameStatus";
+import { LeaderboardPlaceholder } from "../features/play/components/LeaderboardPlaceholder";
+import { useGameTimer } from "../hooks/useGameTimer";
+import type { Level } from "../types/level";
 
 const getTileStyle = (tile: Tile) => {
   switch (tile) {
@@ -42,6 +46,8 @@ const getTileIcon = (tile: Tile) => {
 
 function PlayPage() {
   const game = useGame();
+  const timer = useGameTimer(game.level?.id ?? null, game.status);
+  const [leaderboardLevel, setLeaderboardLevel] = useState<Level | null>(null);
 
   useKeyboardControls(game.move);
 
@@ -73,7 +79,17 @@ function PlayPage() {
           </div>
 
           <div className="mt-8">
-            <LevelList levels={game.levels} onPlayLevel={game.handlePlayLevel} />
+            <LevelList
+              levels={game.levels}
+              onPlayLevel={game.handlePlayLevel}
+              onOpenLeaderboard={setLeaderboardLevel}
+            />
+            {leaderboardLevel ? (
+              <LeaderboardPlaceholder
+                level={leaderboardLevel}
+                onClose={() => setLeaderboardLevel(null)}
+              />
+            ) : null}
           </div>
         </div>
       ) : (
@@ -86,11 +102,15 @@ function PlayPage() {
               grid-cols-1
               gap-4
               p-4
-              sm:grid-cols-3
+              sm:grid-cols-4
             "
           >
             <div className="arcade-chip text-yellow-300">
               LEVEL: {game.level.name}
+            </div>
+
+            <div className="arcade-chip text-fuchsia-300">
+              TIME: {timer}
             </div>
 
             <div className="arcade-chip text-cyan-300">

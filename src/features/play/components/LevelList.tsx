@@ -3,9 +3,10 @@ import type { Level } from "../../../types/level";
 interface LevelListProps {
   levels: Level[];
   onPlayLevel: (id: string) => void;
+  onOpenLeaderboard: (level: Level) => void;
 }
 
-export function LevelList({ levels, onPlayLevel }: LevelListProps) {
+export function LevelList({ levels, onPlayLevel, onOpenLeaderboard }: LevelListProps) {
   if (levels.length === 0) {
     return <p className="arcade-chip px-5 py-4 text-cyan-200">No levels available. Create one first.</p>;
   }
@@ -20,6 +21,12 @@ export function LevelList({ levels, onPlayLevel }: LevelListProps) {
               <div className="mt-1 text-xs font-bold text-cyan-200">Created {new Date(lvl.createdAt).toLocaleString()}</div>
             </div>
             <div className="flex gap-2 sm:justify-end">
+              <button
+                onClick={() => onOpenLeaderboard(lvl)}
+                className="arcade-button-cyan w-full px-4 py-2 sm:w-auto"
+              >
+                Leaderboard
+              </button>
               <button
                 onClick={() => onPlayLevel(lvl.id)}
                 className="arcade-button-lime w-full px-4 py-2 sm:w-auto"
