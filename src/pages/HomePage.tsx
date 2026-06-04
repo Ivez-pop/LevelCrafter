@@ -128,7 +128,16 @@ function HomePage() {
 
           <div className="mt-6 flex justify-center">
             {session ? (
-              <LogoutButton />
+              <div className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="arcade-button-violet"
+                >
+                  My Profile
+                </button>
+
+                <LogoutButton />
+              </div>
             ) : (
               <div className="flex flex-wrap justify-center gap-4">
                 <button
