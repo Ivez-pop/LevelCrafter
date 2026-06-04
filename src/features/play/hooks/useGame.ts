@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Level, Position, Tile } from "../../../types/level";
 import type { GameState, GameActions, Difficulty } from "../../../types/gameState";
 import type { Direction } from "../../../game/movement";
 import { processMove } from "../../../game/gameEngine";
 import { getPlayerStart } from "../../../game/spawn";
 import { getLevelsByDifficulty, getLevelById } from "../../../services/levelStorage";
+import { recordCompletedLevel } from "../../../services/gameplayService";
 
 export function useGame(): GameState & GameActions {
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
@@ -12,6 +13,9 @@ export function useGame(): GameState & GameActions {
   const [levels, setLevels] = useState<Level[]>([]);
   const [player, setPlayer] = useState<Position | null>(null);
   const [collected, setCollected] = useState(0);
+  const [moves, setMoves] = useState(0);
+  const movesRef = useRef(0);
+  const startedAtRef = useRef<number | null>(null);
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const [message, setMessage] = useState("");
 
@@ -30,6 +34,9 @@ export function useGame(): GameState & GameActions {
     setLevel(null);
     setPlayer(null);
     setCollected(0);
+    movesRef.current = 0;
+    startedAtRef.current = null;
+    setMoves(0);
     setStatus("idle");
     setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
   }, []);
@@ -51,6 +58,9 @@ export function useGame(): GameState & GameActions {
     setLevel({ ...reloaded, grid: normalizeGrid(reloaded.grid) });
     setPlayer(startPosition);
     setCollected(0);
+    movesRef.current = 0;
+    startedAtRef.current = Date.now();
+    setMoves(0);
     setStatus("restart");
     setMessage("Hazard hit! Level restarted.");
   }, [difficulty, level]);
@@ -70,6 +80,9 @@ export function useGame(): GameState & GameActions {
 
     const result = processMove(level, player, direction);
     console.log("[useGame] processMove result", result);
+    const nextMoveCount = movesRef.current + 1;
+    movesRef.current = nextMoveCount;
+    setMoves(nextMoveCount);
 
     if (result.event === "blocked") {
       setStatus("blocked");
@@ -107,6 +120,20 @@ export function useGame(): GameState & GameActions {
     }
 
     if (result.event === "win") {
+      const completionTimeSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - (startedAtRef.current ?? Date.now())) / 1000),
+      );
+
+      void recordCompletedLevel({
+        level,
+        coinsCollected: collected,
+        moves: nextMoveCount,
+        timeSeconds: completionTimeSeconds,
+      }).catch((error: unknown) => {
+        console.error("[useGame] failed to persist completed level", error);
+      });
+
       setPlayer(nextPosition);
       setStatus("win");
       setMessage("You win! Congratulations.");
@@ -116,7 +143,7 @@ export function useGame(): GameState & GameActions {
     setPlayer(nextPosition);
     setStatus("continue");
     setMessage("");
-  }, [level, player, status, resetGame]);
+  }, [level, player, status, collected, resetGame]);
 
   const handlePlayLevel = useCallback((id: string) => {
     console.log("[useGame] handlePlayLevel", id);
@@ -131,6 +158,9 @@ export function useGame(): GameState & GameActions {
       setLevel({ ...lvl, grid: normalizeGrid(lvl.grid) });
       setPlayer(startPosition);
       setCollected(0);
+      movesRef.current = 0;
+      startedAtRef.current = Date.now();
+      setMoves(0);
       setStatus("continue");
       setMessage(`Playing ${lvl.name}`);
     } catch {
@@ -142,6 +172,7 @@ export function useGame(): GameState & GameActions {
     level,
     player,
     collected,
+    moves,
     status,
     difficulty,
     message,

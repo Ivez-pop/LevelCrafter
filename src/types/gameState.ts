@@ -8,6 +8,7 @@ export interface GameState {
   level: Level | null;
   player: Position | null;
   collected: number;
+  moves: number;
   status: GameStatus;
   difficulty: Difficulty | null;
   message: string;
