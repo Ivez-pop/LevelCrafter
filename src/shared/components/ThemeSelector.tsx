@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const themes = ["neon", "candy", "terminal"] as const;
 
@@ -9,6 +10,7 @@ function isTheme(value: string | null): value is Theme {
 }
 
 export function ThemeSelector() {
+  const { pathname } = useLocation();
   const [theme, setTheme] = useState<Theme>(() => {
     const storedTheme = localStorage.getItem("levelcrafter.theme");
 
@@ -19,6 +21,10 @@ export function ThemeSelector() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("levelcrafter.theme", theme);
   }, [theme]);
+
+  if (pathname.startsWith("/create")) {
+    return null;
+  }
 
   return (
     <div className="fixed right-3 top-3 z-50 flex gap-2">

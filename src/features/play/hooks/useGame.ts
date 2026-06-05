@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Level, Position, Tile } from "../../../types/level";
-import type { GameState, GameActions, Difficulty } from "../../../types/gameState";
+import type { GameState, GameActions, Difficulty, VentDestination } from "../../../types/gameState";
 import type { Direction } from "../../../game/movement";
-import { processMove } from "../../../game/gameEngine";
+import { getVentDestinations, processMove } from "../../../game/gameEngine";
 import { getPlayerStart } from "../../../game/spawn";
 import { getLevelsByDifficulty, getLevelById } from "../../../services/levelStorage";
 import { recordCompletedLevel } from "../../../services/gameplayService";
@@ -107,6 +107,8 @@ export function useGame(): GameState & GameActions {
   const [explosion, setExplosion] = useState<Position | null>(null);
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const [message, setMessage] = useState("");
+  const [isSelectingVent, setIsSelectingVent] = useState(false);
+  const [ventDestinations, setVentDestinations] = useState<VentDestination[]>([]);
 
   const normalizeGrid = (grid: Tile[][]) =>
     grid.map((row) =>
@@ -115,52 +117,10 @@ export function useGame(): GameState & GameActions {
       ),
     );
 
-  const loadGame = useCallback((selectedDifficulty: Difficulty) => {
-    console.log("[useGame] loadGame", selectedDifficulty);
-    setDifficulty(selectedDifficulty);
-    const found = getLevelsByDifficulty(selectedDifficulty);
-    setLevels(found);
-    setLevel(null);
-    setPlayer(null);
-    setCollected(0);
-    movesRef.current = 0;
-    startedAtRef.current = null;
-    dynamicDirectionsRef.current = new Map();
-    if (explosionTimeoutRef.current !== null) {
-      window.clearTimeout(explosionTimeoutRef.current);
-      explosionTimeoutRef.current = null;
-    }
-    setExplosion(null);
-    setMoves(0);
-    setStatus("idle");
-    setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
+  const clearVentSelection = useCallback(() => {
+    setIsSelectingVent(false);
+    setVentDestinations([]);
   }, []);
-
-  const resetGame = useCallback(() => {
-    if (!difficulty || !level) {
-      console.log("[useGame] resetGame early return", { difficulty, level });
-      return;
-    }
-
-    const reloaded = getLevelById(level.id);
-    if (!reloaded) {
-      console.log("[useGame] resetGame failed to reload", level.id);
-      return;
-    }
-
-    const startPosition = getPlayerStart(reloaded);
-
-    setLevel({ ...reloaded, grid: normalizeGrid(reloaded.grid) });
-    setPlayer(startPosition);
-    setCollected(0);
-    movesRef.current = 0;
-    startedAtRef.current = Date.now();
-    dynamicDirectionsRef.current = new Map();
-    setExplosion(null);
-    setMoves(0);
-    setStatus("continue");
-    setMessage("");
-  }, [difficulty, level]);
 
   const triggerHazardReset = useCallback((position: Position) => {
     if (explosionTimeoutRef.current !== null) {
@@ -180,6 +140,72 @@ export function useGame(): GameState & GameActions {
     }, 500);
   }, []);
 
+  const enterVentSelection = useCallback(
+    (entry: Position, levelToUse: Level) => {
+      const destinations = getVentDestinations(levelToUse, entry);
+
+      if (destinations.length === 0) {
+        clearVentSelection();
+        setMessage("Vent jump!");
+        return;
+      }
+
+      setVentDestinations(destinations);
+      setIsSelectingVent(true);
+      setStatus("continue");
+      setMessage("Click a vent destination.");
+    },
+    [clearVentSelection, triggerHazardReset],
+  );
+
+  const loadGame = useCallback(async (selectedDifficulty: Difficulty) => {
+    console.log("[useGame] loadGame", selectedDifficulty);
+    setDifficulty(selectedDifficulty);
+    const found = await getLevelsByDifficulty(selectedDifficulty);
+    setLevels(found);
+    setLevel(null);
+    setPlayer(null);
+    setCollected(0);
+    movesRef.current = 0;
+    startedAtRef.current = null;
+    dynamicDirectionsRef.current = new Map();
+    clearVentSelection();
+    if (explosionTimeoutRef.current !== null) {
+      window.clearTimeout(explosionTimeoutRef.current);
+      explosionTimeoutRef.current = null;
+    }
+    setExplosion(null);
+    setMoves(0);
+    setStatus("idle");
+    setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
+  }, [clearVentSelection]);
+
+  const resetGame = useCallback(async () => {
+    if (!difficulty || !level) {
+      console.log("[useGame] resetGame early return", { difficulty, level });
+      return;
+    }
+
+    const reloaded = await getLevelById(level.id);
+    if (!reloaded) {
+      console.log("[useGame] resetGame failed to reload", level.id);
+      return;
+    }
+
+    const startPosition = getPlayerStart(reloaded);
+
+    setLevel({ ...reloaded, grid: normalizeGrid(reloaded.grid) });
+    setPlayer(startPosition);
+    setCollected(0);
+    movesRef.current = 0;
+    startedAtRef.current = Date.now();
+    dynamicDirectionsRef.current = new Map();
+    setExplosion(null);
+    setMoves(0);
+    setStatus("continue");
+    setMessage("");
+  }, [difficulty, level]);
+
   const move = useCallback((direction: Direction) => {
     console.log("[useGame] move", direction, { level: level?.id, player, status });
 
@@ -188,7 +214,7 @@ export function useGame(): GameState & GameActions {
       return;
     }
 
-    if (status === "win" || status === "restart") {
+    if (status === "win" || status === "restart" || isSelectingVent) {
       console.log("[useGame] move blocked by win status");
       return;
     }
@@ -265,22 +291,8 @@ export function useGame(): GameState & GameActions {
     }
 
     if (result.event === "vent") {
-      const advanced = advanceDynamicDangers(
-        level.grid,
-        nextPosition,
-        dynamicDirectionsRef.current,
-      );
-
-      if (advanced.hitPlayer) {
-        triggerHazardReset(nextPosition);
-        return;
-      }
-
-      dynamicDirectionsRef.current = advanced.directions;
-      setLevel({ ...level, grid: advanced.grid });
       setPlayer(nextPosition);
-      setStatus("continue");
-      setMessage("Vent jump!");
+      enterVentSelection(nextPosition, level);
       retroAudio.playMove();
       return;
     }
@@ -302,11 +314,11 @@ export function useGame(): GameState & GameActions {
     setStatus("continue");
     setMessage("");
     retroAudio.playMove();
-  }, [level, player, status, collected, triggerHazardReset]);
+  }, [level, player, status, collected, triggerHazardReset, isSelectingVent, enterVentSelection]);
 
-  const handlePlayLevel = useCallback((id: string) => {
+  const handlePlayLevel = useCallback(async (id: string) => {
     console.log("[useGame] handlePlayLevel", id);
-    const lvl = getLevelById(id);
+    const lvl = await getLevelById(id);
     if (!lvl) {
       setMessage("Failed to load level.");
       return;
@@ -323,10 +335,70 @@ export function useGame(): GameState & GameActions {
       setMoves(0);
       setStatus("continue");
       setMessage(`Playing ${lvl.name}`);
+      clearVentSelection();
     } catch {
       setMessage("Level is invalid: missing player start.");
     }
-  }, []);
+  }, [clearVentSelection]);
+
+  const selectVentDestination = useCallback(
+    (destination: VentDestination) => {
+      if (!isSelectingVent || !level) {
+        return;
+      }
+
+      const isAllowed = ventDestinations.some(
+        (vent) => vent.x === destination.x && vent.y === destination.y,
+      );
+
+      if (!isAllowed) {
+        return;
+      }
+
+      const advanced = advanceDynamicDangers(
+        level.grid,
+        destination,
+        dynamicDirectionsRef.current,
+      );
+
+      if (advanced.hitPlayer) {
+        triggerHazardReset(destination);
+        clearVentSelection();
+        return;
+      }
+
+      dynamicDirectionsRef.current = advanced.directions;
+      setLevel({ ...level, grid: advanced.grid });
+      setPlayer(destination);
+      setStatus("continue");
+      setMessage("Vent jump!");
+      clearVentSelection();
+      retroAudio.playMove();
+    },
+    [clearVentSelection, isSelectingVent, level, triggerHazardReset, ventDestinations],
+  );
+
+  useEffect(() => {
+    if (!isSelectingVent) {
+      return;
+    }
+
+    const handleVentSelectionKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+      clearVentSelection();
+      setMessage("Vent selection cancelled.");
+    };
+
+    window.addEventListener("keydown", handleVentSelectionKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleVentSelectionKeyDown);
+    };
+  }, [clearVentSelection, isSelectingVent]);
 
   const clearExplosionTimeout = useCallback(() => {
     if (explosionTimeoutRef.current !== null) {
@@ -347,9 +419,12 @@ export function useGame(): GameState & GameActions {
     message,
     levels,
     explosion,
+    isSelectingVent,
+    ventDestinations,
     loadGame,
     handlePlayLevel,
     resetGame,
     move,
+    selectVentDestination,
   };
 }

@@ -5,7 +5,7 @@ import { editorTiles } from "../constants/tiles";
 const allowedTiles = new Set<Tile>(editorTiles);
 const traversableTiles = new Set<Tile>(["empty", "coin", "exit", "player", "vent"]);
 
-function getVentDestination(grid: Tile[][], entryX: number, entryY: number) {
+function getVentDestinations(grid: Tile[][], entryX: number, entryY: number) {
   const vents: Array<[number, number]> = [];
 
   grid.forEach((row, y) => {
@@ -16,17 +16,7 @@ function getVentDestination(grid: Tile[][], entryX: number, entryY: number) {
     });
   });
 
-  if (vents.length < 2) {
-    return null;
-  }
-
-  const entryIndex = vents.findIndex(([x, y]) => x === entryX && y === entryY);
-
-  if (entryIndex === -1) {
-    return null;
-  }
-
-  return vents[(entryIndex + 1) % vents.length];
+  return vents.filter(([x, y]) => x !== entryX || y !== entryY);
 }
 
 function hasPathFromPlayerToExit(grid: Tile[][]): boolean {
@@ -79,11 +69,9 @@ function hasPathFromPlayerToExit(grid: Tile[][]): boolean {
         queue.push([nextX, nextY]);
 
         if (nextTile === "vent") {
-          const destination = getVentDestination(grid, nextX, nextY);
+          const destinations = getVentDestinations(grid, nextX, nextY);
 
-          if (destination) {
-            const [ventX, ventY] = destination;
-
+          for (const [ventX, ventY] of destinations) {
             if (!visited.has(`${ventX},${ventY}`)) {
               visited.add(`${ventX},${ventY}`);
               queue.push([ventX, ventY]);
@@ -166,7 +154,7 @@ export const validateLevel = (
   }
 
   if (ventCount === 1) {
-    alert("Vents work in pairs. Add another vent or remove the single vent.");
+    alert("A level must contain at least 2 vents.");
     return false;
   }
 

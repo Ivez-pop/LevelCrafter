@@ -46,28 +46,56 @@ export async function updateBestScore(
   run: CompletedGameplayRunInput,
   playSessionId: string | null = null,
 ) {
-  const supabase = getSupabaseClient();
-  const achievedAt = run.completedAt ?? new Date().toISOString();
+  try {
+    const supabase = getSupabaseClient();
+    const achievedAt = run.completedAt ?? new Date().toISOString();
 
-  const { data: existing, error: readError } = await supabase
-    .from("best_scores")
-    .select("*")
-    .eq("user_id", run.userId)
-    .eq("level_id", run.levelId)
-    .maybeSingle();
-
-  if (readError) {
-    throw readError;
-  }
-
-  if (existing && existing.best_score >= run.score) {
-    return mapBestScore(existing);
-  }
-
-  if (existing) {
-    const { data, error } = await supabase
+    const { data: existing, error: readError } = await supabase
       .from("best_scores")
-      .update({
+      .select("*")
+      .eq("user_id", run.userId)
+      .eq("level_id", run.levelId)
+      .maybeSingle();
+
+    if (readError) {
+      throw readError;
+    }
+
+    if (existing && existing.best_score >= run.score) {
+      return mapBestScore(existing);
+    }
+
+    if (existing) {
+      console.log("UPDATING BEST SCORE");
+      const result = await supabase
+        .from("best_scores")
+        .update({
+          best_score: run.score,
+          moves: run.moves,
+          time_seconds: run.timeSeconds,
+          play_session_id: playSessionId,
+          achieved_at: achievedAt,
+          updated_at: achievedAt,
+        })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      
+      console.log("BEST SCORE RESULT", result);
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      return mapBestScore(result.data);
+    }
+
+    console.log("UPDATING BEST SCORE (INSERT)");
+    const result = await supabase
+      .from("best_scores")
+      .insert({
+        user_id: run.userId,
+        level_id: run.levelId,
         best_score: run.score,
         moves: run.moves,
         time_seconds: run.timeSeconds,
@@ -75,37 +103,20 @@ export async function updateBestScore(
         achieved_at: achievedAt,
         updated_at: achievedAt,
       })
-      .eq("id", existing.id)
       .select("*")
       .single();
+      
+    console.log("BEST SCORE RESULT", result);
 
-    if (error) {
-      throw error;
+    if (result.error) {
+      throw result.error;
     }
 
-    return mapBestScore(data);
-  }
-
-  const { data, error } = await supabase
-    .from("best_scores")
-    .insert({
-      user_id: run.userId,
-      level_id: run.levelId,
-      best_score: run.score,
-      moves: run.moves,
-      time_seconds: run.timeSeconds,
-      play_session_id: playSessionId,
-      achieved_at: achievedAt,
-      updated_at: achievedAt,
-    })
-    .select("*")
-    .single();
-
-  if (error) {
+    return mapBestScore(result.data);
+  } catch (error) {
+    console.error("FULL ERROR", error);
     throw error;
   }
-
-  return mapBestScore(data);
 }
 
 export async function getUserBestScores(userId: string) {

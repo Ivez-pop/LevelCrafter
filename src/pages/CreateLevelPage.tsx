@@ -9,7 +9,6 @@ import { publishCreatedLevel } from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
-import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 type LevelDraft = Omit<Level, "id" | "createdAt">;
 
@@ -171,7 +170,7 @@ function CreateLevelPage() {
 
     if (!draft) return;
 
-    const id = saveLevel(draft);
+    const id = await saveLevel(draft);
 
     void publishCreatedLevel({
       id,
@@ -225,8 +224,11 @@ function CreateLevelPage() {
   };
 
   return (
-    <div className="arcade-screen">
-      <GlobalPageNavigation />
+    <div className="arcade-screen relative min-h-screen">
+      <div className="absolute right-4 top-2 z-50 flex gap-3">
+        <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
+        <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
+      </div>
       <div className="arcade-shell grid min-h-[calc(100vh-2rem)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] sm:min-h-[calc(100vh-3rem)]">
         <div className="arcade-panel flex min-h-0 flex-col gap-5 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-auto">
           <div>

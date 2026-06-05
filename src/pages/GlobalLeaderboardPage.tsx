@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getGlobalRankings } from "../services/rankingService";
 import type { GlobalRankingEntry } from "../types/leaderboard";
-import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function formatRankedUsername(entry: GlobalRankingEntry) {
   return entry.username ?? entry.displayName ?? "Anonymous";
@@ -11,6 +11,7 @@ export default function GlobalLeaderboardPage() {
   const [entries, setEntries] = useState<GlobalRankingEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let isActive = true;
@@ -50,14 +51,16 @@ export default function GlobalLeaderboardPage() {
 
   return (
     <div className="arcade-screen">
-      <GlobalPageNavigation />
       <div className="arcade-shell">
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="arcade-kicker mb-2">Platform Rankings</p>
             <h1 className="arcade-title text-4xl md:text-6xl">Global Leaderboard</h1>
           </div>
-
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
+            <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
+          </div>
         </div>
 
         <div className="arcade-panel p-4 sm:p-6">

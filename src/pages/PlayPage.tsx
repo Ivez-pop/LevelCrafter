@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import type { ChangeEvent } from "react";
 import type { Tile } from "../types/level";
@@ -17,11 +18,11 @@ import {
   importLevelFromCode,
   importLevelFromJson,
 } from "../services/levelStorage";
-import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function PlayPage() {
   const game = useGame();
   const timer = useGameTimer(game.level?.id ?? null, game.status);
+  const navigate = useNavigate();
   const [leaderboardLevel, setLeaderboardLevel] = useState<Level | null>(null);
   const [levelCode, setLevelCode] = useState("");
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -43,15 +44,15 @@ function PlayPage() {
 
   useKeyboardControls(game.move);
 
-  const startImportedLevel = (importedLevelId: string) => {
-    const importedLevel = getLevelById(importedLevelId);
+  const startImportedLevel = async (importedLevelId: string) => {
+    const importedLevel = await getLevelById(importedLevelId);
 
     if (!importedLevel) {
       throw new Error("Imported level could not be loaded.");
     }
 
-    game.loadGame(importedLevel.difficulty);
-    game.handlePlayLevel(importedLevelId);
+    await game.loadGame(importedLevel.difficulty);
+    await game.handlePlayLevel(importedLevelId);
   };
 
   const handleImportJson = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +61,7 @@ function PlayPage() {
     if (!file) return;
 
     try {
-      startImportedLevel(await importLevelFromJson(file));
+      await startImportedLevel(await importLevelFromJson(file));
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Invalid level file!");
@@ -70,9 +71,9 @@ function PlayPage() {
     }
   };
 
-  const handleImportCode = () => {
+  const handleImportCode = async () => {
     try {
-      startImportedLevel(importLevelFromCode(levelCode));
+      await startImportedLevel(await importLevelFromCode(levelCode));
       setLevelCode("");
       setIsImportOpen(false);
     } catch (err) {
@@ -94,8 +95,13 @@ function PlayPage() {
 
   return (
     <div className="arcade-screen">
-      <GlobalPageNavigation />
-      <h1 className="arcade-title mb-6">PLAY LEVELS</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="arcade-title !mb-0">PLAY LEVELS</h1>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
+          <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
+        </div>
+      </div>
 
       {!game.level ? (
         <div className="mx-auto max-w-5xl">
@@ -214,6 +220,9 @@ function PlayPage() {
                 explosion={game.explosion}
                 getTileStyle={getTileStyle}
                 onMove={game.move}
+                onSelectVentDestination={game.selectVentDestination}
+                isSelectingVent={game.isSelectingVent}
+                availableVentDestinations={game.ventDestinations}
               />
             </div>
 

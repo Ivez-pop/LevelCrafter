@@ -18,7 +18,7 @@ import {
   evaluateTile,
 } from "./rules";
 
-function getVentDestination(level: Level, entry: Position): Position {
+export function getVentPositions(level: Level): Position[] {
   const vents: Position[] = [];
 
   level.grid.forEach((row: Tile[], y: number) => {
@@ -29,19 +29,13 @@ function getVentDestination(level: Level, entry: Position): Position {
     });
   });
 
-  if (vents.length < 2) {
-    return entry;
-  }
+  return vents;
+}
 
-  const entryIndex = vents.findIndex(
-    (vent) => vent.x === entry.x && vent.y === entry.y,
+export function getVentDestinations(level: Level, entry: Position): Position[] {
+  return getVentPositions(level).filter(
+    (vent) => vent.x !== entry.x || vent.y !== entry.y,
   );
-
-  if (entryIndex === -1) {
-    return entry;
-  }
-
-  return vents[(entryIndex + 1) % vents.length];
 }
 
 export function processMove(
@@ -74,11 +68,11 @@ export function processMove(
       level,
       next.x,
       next.y
-    );
+  );
   const event = evaluateTile(tile);
 
   return {
-    player: event === "vent" ? getVentDestination(level, next) : next,
+    player: next,
     event,
   };
 }

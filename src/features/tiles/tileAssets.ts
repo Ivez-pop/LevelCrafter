@@ -6,6 +6,7 @@ import hazard from "../../../tiles/bomb.png";
 import blast from "../../../tiles/blast.png";
 import player from "../../../tiles/player.png";
 import exit from "../../../tiles/trophy.png";
+import vent from "../../../tiles/vent.png";
 import floorSrc from "../../../tiles/tile.png";
 
 export interface TileAsset {
@@ -66,7 +67,7 @@ const tileAssets: Record<Tile, TileAsset> = {
     hasFloor: true,
   },
   vent: {
-    src: null,
+    src: vent,
     alt: "Vent tile",
     hasFloor: true,
   },
