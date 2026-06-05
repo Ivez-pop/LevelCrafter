@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase";
+import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -26,6 +27,7 @@ function LoginPage() {
 
   return (
     <div className="arcade-screen flex items-center justify-center">
+      <GlobalPageNavigation />
       <div className="arcade-panel w-full max-w-md p-8">
         <p className="arcade-kicker mb-2">Account Access</p>
 

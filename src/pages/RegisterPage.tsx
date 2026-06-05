@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase";
+import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -32,6 +33,7 @@ function RegisterPage() {
 
   return (
     <div className="arcade-screen flex items-center justify-center">
+      <GlobalPageNavigation />
       <div className="arcade-panel w-full max-w-md p-8">
         <p className="arcade-kicker mb-2">New Player</p>
 

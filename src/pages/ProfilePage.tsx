@@ -109,11 +109,11 @@ function ProfilePage() {
             </button>
 
             <button onClick={() => navigate("/")} className="arcade-button-cyan">
-              Home
+              HOME
             </button>
 
             <button onClick={handleLogout} className="arcade-button-rose">
-              Logout
+              LOGOUT
             </button>
           </div>
         </div>

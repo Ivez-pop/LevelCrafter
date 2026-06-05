@@ -9,6 +9,7 @@ import { publishCreatedLevel } from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
+import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 type LevelDraft = Omit<Level, "id" | "createdAt">;
 
@@ -225,6 +226,7 @@ function CreateLevelPage() {
 
   return (
     <div className="arcade-screen">
+      <GlobalPageNavigation />
       <div className="arcade-shell grid min-h-[calc(100vh-2rem)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] sm:min-h-[calc(100vh-3rem)]">
         <div className="arcade-panel flex min-h-0 flex-col gap-5 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-auto">
           <div>

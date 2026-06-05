@@ -17,6 +17,7 @@ import {
   importLevelFromCode,
   importLevelFromJson,
 } from "../services/levelStorage";
+import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function PlayPage() {
   const game = useGame();
@@ -93,6 +94,7 @@ function PlayPage() {
 
   return (
     <div className="arcade-screen">
+      <GlobalPageNavigation />
       <h1 className="arcade-title mb-6">PLAY LEVELS</h1>
 
       {!game.level ? (
