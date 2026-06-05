@@ -8,10 +8,12 @@ import ProfilePage from "./pages/ProfilePage";
 import GlobalLeaderboardPage from "./pages/GlobalLeaderboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeSelector } from "./shared/components/ThemeSelector";
+import { RetroAudioController } from "./components/RetroAudioController";
 
 function App() {
   return (
     <BrowserRouter>
+      <RetroAudioController />
       <ThemeSelector />
       <Routes>
         <Route path="/" element={<HomePage />} />

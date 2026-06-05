@@ -65,6 +65,11 @@ const tileAssets: Record<Tile, TileAsset> = {
     alt: "Vertical moving hazard tile",
     hasFloor: true,
   },
+  vent: {
+    src: null,
+    alt: "Vent tile",
+    hasFloor: true,
+  },
   player: {
     src: player,
     alt: "Player tile",

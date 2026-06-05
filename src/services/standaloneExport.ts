@@ -35,8 +35,8 @@ export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) 
   <script>
     const level = ${embeddedLevel};
     const dynamicTiles = new Set(["enemyHorizontal","enemyVertical","movingHazardHorizontal","movingHazardVertical"]);
-    const styles = {empty:"#e9f7ff",wall:"#4b5563",coin:"#ffd83d",hazard:"#ff3d57",enemyHorizontal:"#fb7185",enemyVertical:"#f43f5e",movingHazardHorizontal:"#f97316",movingHazardVertical:"#ea580c",player:"#43ff8f",exit:"#39dfff"};
-    const icons = {empty:"",wall:"W",coin:"$",hazard:"!",enemyHorizontal:"EH",enemyVertical:"EV",movingHazardHorizontal:"MH",movingHazardVertical:"MV",player:"P",exit:"EX"};
+    const styles = {empty:"#e9f7ff",wall:"#4b5563",coin:"#ffd83d",hazard:"#ff3d57",enemyHorizontal:"#fb7185",enemyVertical:"#f43f5e",movingHazardHorizontal:"#f97316",movingHazardVertical:"#ea580c",vent:"#7c3aed",player:"#43ff8f",exit:"#39dfff"};
+    const icons = {empty:"",wall:"W",coin:"$",hazard:"!",enemyHorizontal:"EH",enemyVertical:"EV",movingHazardHorizontal:"MH",movingHazardVertical:"MV",vent:"VT",player:"P",exit:"EX"};
     let baseGrid, player, movers, moves, coins, won;
     function reset(){
       moves = 0; coins = 0; won = false; movers = [];
@@ -54,18 +54,27 @@ export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) 
       if(tileAt(nx,ny)==="wall" || dangerAt(nx,ny)){ m.dx*=-1; m.dy*=-1; nx=m.x+m.dx; ny=m.y+m.dy; }
       if(tileAt(nx,ny)!=="wall" && !dangerAt(nx,ny)){ m.x=nx; m.y=ny; }
     }
+    function ventDestination(entryX,entryY){
+      const vents = [];
+      for(let y=0;y<level.height;y++) for(let x=0;x<level.width;x++){
+        if(baseGrid[y][x]==="vent") vents.push({x,y});
+      }
+      if(vents.length<2) return {x:entryX,y:entryY};
+      const index = vents.findIndex((vent)=>vent.x===entryX&&vent.y===entryY);
+      return index===-1 ? {x:entryX,y:entryY} : vents[(index+1)%vents.length];
+    }
     function step(dx,dy){
       if(won) return;
       const nx=player.x+dx, ny=player.y+dy, tile=tileAt(nx,ny);
       if(tile==="wall"){ render("Blocked"); return; }
       moves++;
       if(tile==="hazard" || dangerAt(nx,ny)){ reset(); render("Restart"); return; }
-      player={x:nx,y:ny};
+      player=tile==="vent" ? ventDestination(nx,ny) : {x:nx,y:ny};
       if(tile==="coin"){ coins++; baseGrid[ny][nx]="empty"; }
       if(tile==="exit"){ won=true; render("You win"); return; }
       movers.forEach(moveMover);
       if(dangerAt(player.x,player.y)){ reset(); render("Restart"); return; }
-      render(tile==="coin" ? "Coin" : "Go");
+      render(tile==="coin" ? "Coin" : tile==="vent" ? "Vent" : "Go");
     }
     function render(status){
       document.getElementById("moves").textContent = "Moves: " + moves;
