@@ -31,4 +31,3 @@ export function TileArtwork({ tile, className = "", imageClassName = "" }: TileA
     </div>
   );
 }
-
