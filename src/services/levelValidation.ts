@@ -3,7 +3,31 @@ import { difficultySizes } from "../constants/difficulty";
 import { editorTiles } from "../constants/tiles";
 
 const allowedTiles = new Set<Tile>(editorTiles);
-const traversableTiles = new Set<Tile>(["empty", "coin", "exit", "player"]);
+const traversableTiles = new Set<Tile>(["empty", "coin", "exit", "player", "vent"]);
+
+function getVentDestination(grid: Tile[][], entryX: number, entryY: number) {
+  const vents: Array<[number, number]> = [];
+
+  grid.forEach((row, y) => {
+    row.forEach((tile, x) => {
+      if (tile === "vent") {
+        vents.push([x, y]);
+      }
+    });
+  });
+
+  if (vents.length < 2) {
+    return null;
+  }
+
+  const entryIndex = vents.findIndex(([x, y]) => x === entryX && y === entryY);
+
+  if (entryIndex === -1) {
+    return null;
+  }
+
+  return vents[(entryIndex + 1) % vents.length];
+}
 
 function hasPathFromPlayerToExit(grid: Tile[][]): boolean {
   let startX = -1;
@@ -53,6 +77,19 @@ function hasPathFromPlayerToExit(grid: Tile[][]): boolean {
       ) {
         visited.add(`${nextX},${nextY}`);
         queue.push([nextX, nextY]);
+
+        if (nextTile === "vent") {
+          const destination = getVentDestination(grid, nextX, nextY);
+
+          if (destination) {
+            const [ventX, ventY] = destination;
+
+            if (!visited.has(`${ventX},${ventY}`)) {
+              visited.add(`${ventX},${ventY}`);
+              queue.push([ventX, ventY]);
+            }
+          }
+        }
       }
     }
   }
@@ -80,6 +117,7 @@ export const validateLevel = (
 
   let playerCount = 0;
   let exitCount = 0;
+  let ventCount = 0;
 
   for (const row of grid) {
     if (row.length !== grid.length) {
@@ -99,6 +137,10 @@ export const validateLevel = (
 
       if (tile === "exit") {
         exitCount++;
+      }
+
+      if (tile === "vent") {
+        ventCount++;
       }
     }
   }
@@ -120,6 +162,11 @@ export const validateLevel = (
 
   if (exitCount > 1) {
     alert(`Level must contain exactly 1 exit. Currently: ${exitCount}`);
+    return false;
+  }
+
+  if (ventCount === 1) {
+    alert("Vents work in pairs. Add another vent or remove the single vent.");
     return false;
   }
 

@@ -264,6 +264,27 @@ export function useGame(): GameState & GameActions {
       return;
     }
 
+    if (result.event === "vent") {
+      const advanced = advanceDynamicDangers(
+        level.grid,
+        nextPosition,
+        dynamicDirectionsRef.current,
+      );
+
+      if (advanced.hitPlayer) {
+        triggerHazardReset(nextPosition);
+        return;
+      }
+
+      dynamicDirectionsRef.current = advanced.directions;
+      setLevel({ ...level, grid: advanced.grid });
+      setPlayer(nextPosition);
+      setStatus("continue");
+      setMessage("Vent jump!");
+      retroAudio.playMove();
+      return;
+    }
+
     const advanced = advanceDynamicDangers(
       level.grid,
       nextPosition,

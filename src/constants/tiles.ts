@@ -8,6 +8,7 @@ export const editorTiles: Tile[] = [
   "enemyVertical",
   "movingHazardHorizontal",
   "movingHazardVertical",
+  "vent",
   "player",
   "exit",
   "empty",
@@ -22,6 +23,7 @@ export const tileLabels: Record<Tile, string> = {
   enemyVertical: "Enemy V",
   movingHazardHorizontal: "Hazard H",
   movingHazardVertical: "Hazard V",
+  vent: "Vent",
   player: "Player",
   exit: "Exit",
 };
@@ -35,6 +37,7 @@ export const tileStyles: Record<Tile, string> = {
   enemyVertical: "bg-[#f43f5e]",
   movingHazardHorizontal: "bg-[#f97316]",
   movingHazardVertical: "bg-[#ea580c]",
+  vent: "bg-[#7c3aed]",
   player: "bg-[#43ff8f]",
   exit: "bg-[#39dfff]",
 };
@@ -48,6 +51,7 @@ export const tileIcons: Record<Tile, string> = {
   enemyVertical: "EV",
   movingHazardHorizontal: "MH",
   movingHazardVertical: "MV",
+  vent: "VT",
   player: "P",
   exit: "EX",
 };
