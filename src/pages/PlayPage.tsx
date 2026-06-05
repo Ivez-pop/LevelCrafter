@@ -43,15 +43,15 @@ function PlayPage() {
 
   useKeyboardControls(game.move);
 
-  const startImportedLevel = (importedLevelId: string) => {
-    const importedLevel = getLevelById(importedLevelId);
+  const startImportedLevel = async (importedLevelId: string) => {
+    const importedLevel = await getLevelById(importedLevelId);
 
     if (!importedLevel) {
       throw new Error("Imported level could not be loaded.");
     }
 
-    game.loadGame(importedLevel.difficulty);
-    game.handlePlayLevel(importedLevelId);
+    await game.loadGame(importedLevel.difficulty);
+    await game.handlePlayLevel(importedLevelId);
   };
 
   const handleImportJson = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +60,7 @@ function PlayPage() {
     if (!file) return;
 
     try {
-      startImportedLevel(await importLevelFromJson(file));
+      await startImportedLevel(await importLevelFromJson(file));
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Invalid level file!");
@@ -70,9 +70,9 @@ function PlayPage() {
     }
   };
 
-  const handleImportCode = () => {
+  const handleImportCode = async () => {
     try {
-      startImportedLevel(importLevelFromCode(levelCode));
+      await startImportedLevel(await importLevelFromCode(levelCode));
       setLevelCode("");
       setIsImportOpen(false);
     } catch (err) {

@@ -114,10 +114,10 @@ export function useGame(): GameState & GameActions {
       ),
     );
 
-  const loadGame = useCallback((selectedDifficulty: Difficulty) => {
+  const loadGame = useCallback(async (selectedDifficulty: Difficulty) => {
     console.log("[useGame] loadGame", selectedDifficulty);
     setDifficulty(selectedDifficulty);
-    const found = getLevelsByDifficulty(selectedDifficulty);
+    const found = await getLevelsByDifficulty(selectedDifficulty);
     setLevels(found);
     setLevel(null);
     setPlayer(null);
@@ -135,13 +135,13 @@ export function useGame(): GameState & GameActions {
     setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
   }, []);
 
-  const resetGame = useCallback(() => {
+  const resetGame = useCallback(async () => {
     if (!difficulty || !level) {
       console.log("[useGame] resetGame early return", { difficulty, level });
       return;
     }
 
-    const reloaded = getLevelById(level.id);
+    const reloaded = await getLevelById(level.id);
     if (!reloaded) {
       console.log("[useGame] resetGame failed to reload", level.id);
       return;
@@ -277,9 +277,9 @@ export function useGame(): GameState & GameActions {
     setMessage("");
   }, [level, player, status, collected, triggerHazardReset]);
 
-  const handlePlayLevel = useCallback((id: string) => {
+  const handlePlayLevel = useCallback(async (id: string) => {
     console.log("[useGame] handlePlayLevel", id);
-    const lvl = getLevelById(id);
+    const lvl = await getLevelById(id);
     if (!lvl) {
       setMessage("Failed to load level.");
       return;

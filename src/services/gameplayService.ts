@@ -38,28 +38,10 @@ function mapGameplaySession(row: {
   };
 }
 
-async function ensureAuthenticatedUserProfile(level: Level) {
-  const supabase = getSupabaseClient();
+async function ensureAuthenticatedUserProfile() {
   const user = await getAuthenticatedUser();
+
   await ensurePublicUserProfile(user);
-
-  const { error: levelError } = await supabase
-    .from("levels")
-    .upsert({
-      id: level.id,
-      name: level.name,
-      difficulty: level.difficulty,
-      width: level.width,
-      height: level.height,
-      metadata: {
-        source: "localStorage",
-        createdAt: level.createdAt,
-      },
-    }, { onConflict: "id" });
-
-  if (levelError) {
-    throw levelError;
-  }
 
   return {
     id: user.id,
@@ -68,67 +50,86 @@ async function ensureAuthenticatedUserProfile(level: Level) {
 }
 
 export async function storeGameplaySession(run: CompletedGameplayRunInput) {
-  const supabase = getSupabaseClient();
+  try {
+    const supabase = getSupabaseClient();
 
-  const { data: sessionRow, error } = await supabase
-    .from("play_sessions")
-    .insert({
-      user_id: run.userId,
-      level_id: run.levelId,
-      score: run.score,
-      moves: run.moves,
-      time_seconds: run.timeSeconds,
-      completed_at: run.completedAt,
-      metadata: run.metadata ?? {},
-    })
-    .select("*")
-    .single();
+    console.log("CREATING PLAY SESSION");
+    const result = await supabase
+      .from("play_sessions")
+      .insert({
+        user_id: run.userId,
+        level_id: run.levelId,
+        score: run.score,
+        moves: run.moves,
+        time_seconds: run.timeSeconds,
+        completed_at: run.completedAt,
+        metadata: run.metadata ?? {},
+      })
+      .select("*")
+      .single();
 
-  if (error) {
+    console.log("PLAY SESSION RESULT", result);
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    const session = mapGameplaySession(result.data);
+    
+    console.log("UPDATING BEST SCORE");
+    const bestScore = await updateBestScore(run, session.id);
+    console.log("BEST SCORE RESULT", { bestScore });
+
+    return { session, bestScore };
+  } catch (error) {
+    console.error("FULL ERROR", error);
     throw error;
   }
-
-  const session = mapGameplaySession(sessionRow);
-  const bestScore = await updateBestScore(run, session.id);
-
-  return { session, bestScore };
 }
 
 export async function recordCompletedRun(run: CompletedGameplayRunInput): Promise<{
   session: GameplaySession;
   bestScore: BestScore;
 }> {
-  const supabase = getSupabaseClient();
+  try {
+    const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase.rpc("record_completed_run", {
-    p_user_id: run.userId,
-    p_level_id: run.levelId,
-    p_score: run.score,
-    p_moves: run.moves,
-    p_time_seconds: run.timeSeconds,
-    p_completed_at: run.completedAt,
-    p_metadata: run.metadata ?? {},
-  });
+    console.log("CREATING PLAY SESSION (RPC)");
+    const result = await supabase.rpc("record_completed_run", {
+      p_user_id: run.userId,
+      p_level_id: run.levelId,
+      p_score: run.score,
+      p_moves: run.moves,
+      p_time_seconds: run.timeSeconds,
+      p_completed_at: run.completedAt,
+      p_metadata: run.metadata ?? {},
+    });
 
-  if (error) {
+    console.log("PLAY SESSION RESULT", result);
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (!result.data || typeof result.data !== "object" || Array.isArray(result.data)) {
+      throw new Error("Unexpected response from record_completed_run.");
+    }
+
+    const session = (result.data as { session?: unknown }).session;
+    const bestScore = (result.data as { bestScore?: unknown }).bestScore;
+
+    if (!session || !bestScore) {
+      throw new Error("record_completed_run did not return session and bestScore.");
+    }
+
+    return {
+      session: session as GameplaySession,
+      bestScore: bestScore as BestScore,
+    };
+  } catch (error) {
+    console.error("FULL ERROR", error);
     throw error;
   }
-
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    throw new Error("Unexpected response from record_completed_run.");
-  }
-
-  const session = (data as { session?: unknown }).session;
-  const bestScore = (data as { bestScore?: unknown }).bestScore;
-
-  if (!session || !bestScore) {
-    throw new Error("record_completed_run did not return session and bestScore.");
-  }
-
-  return {
-    session: session as GameplaySession,
-    bestScore: bestScore as BestScore,
-  };
 }
 
 export async function recordCompletedLevel({
@@ -137,7 +138,7 @@ export async function recordCompletedLevel({
   moves,
   timeSeconds,
 }: CompletedLevelInput) {
-  const { id: userId } = await ensureAuthenticatedUserProfile(level);
+  const { id: userId } = await ensureAuthenticatedUserProfile();
   const score = calculateCompletionScore({
     coinsCollected,
     moves,

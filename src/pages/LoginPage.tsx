@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import { getSupabaseClient } from "../lib/supabase";
 import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function LoginPage() {
@@ -10,6 +10,8 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
+    const supabase = getSupabaseClient();
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,

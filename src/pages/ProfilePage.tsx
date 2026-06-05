@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import { getSupabaseClient } from "../lib/supabase";
 import { getProfileDashboard, updateUsername } from "../services/profileService";
 import type { ProfileDashboardData } from "../services/profileService";
 
@@ -28,6 +28,7 @@ function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const supabase = getSupabaseClient();
 
   const loadProfile = async () => {
     setIsLoading(true);

@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import DifficultySelector from "../shared/components/DifficultySelector";
 import GridEditor from "../features/editor/components/GridEditor";
 import TilePalette from "../features/editor/components/TilePalette";
 import type { Level, Tile } from "../types/level";
-import { encodeLevelCode, saveLevel } from "../services/levelStorage";
-import { publishCreatedLevel } from "../services/profileService";
+import { encodeLevelCode, getLevelById, saveLevel } from "../services/levelStorage";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
@@ -36,6 +35,7 @@ function downloadFile(filename: string, contents: string, type: string) {
 }
 
 function CreateLevelPage() {
+  const { levelId } = useParams<{ levelId?: string }>();
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [grid, setGrid] = useState<Tile[][]>([]);
   const [history, setHistory] = useState<Tile[][][]>([]);
@@ -44,8 +44,47 @@ function CreateLevelPage() {
   const [saveError, setSaveError] = useState("");
   const [selectedTile, setSelectedTile] = useState<Tile>("wall");
   const [shareCode, setShareCode] = useState("");
+  const [isLoadingLevel, setIsLoadingLevel] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!levelId) return;
+
+    let cancelled = false;
+
+    const loadLevel = async () => {
+      setIsLoadingLevel(true);
+
+      try {
+        const existing = await getLevelById(levelId);
+
+        if (!existing || cancelled) return;
+
+        setDifficulty(existing.difficulty);
+        setGrid(existing.grid);
+        setHistory([]);
+        setFuture([]);
+        setLevelName(existing.name);
+        setShareCode("");
+      } catch (error) {
+        console.error("[CreateLevelPage] failed to load level", error);
+        if (!cancelled) {
+          setSaveError(error instanceof Error ? error.message : "Failed to load level.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingLevel(false);
+        }
+      }
+    };
+
+    void loadLevel();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [levelId]);
 
   const commitGrid = (nextGrid: Tile[][]) => {
     setHistory((items) => [...items, cloneGrid(grid)]);
@@ -171,17 +210,10 @@ function CreateLevelPage() {
 
     if (!draft) return;
 
-    const id = saveLevel(draft);
-
-    void publishCreatedLevel({
-      id,
-      ...draft,
-      createdAt: Date.now(),
-    }).catch((error: unknown) => {
-      console.error("[CreateLevelPage] failed to publish created level", error);
-    });
+    const id = await saveLevel(draft, levelId);
 
     alert(`Level saved! id: ${id}`);
+    navigate(`/create/${id}`);
   };
 
   const handleExportJson = () => {
@@ -229,6 +261,9 @@ function CreateLevelPage() {
       <GlobalPageNavigation />
       <div className="arcade-shell grid min-h-[calc(100vh-2rem)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] sm:min-h-[calc(100vh-3rem)]">
         <div className="arcade-panel flex min-h-0 flex-col gap-5 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-auto">
+          {isLoadingLevel ? (
+            <div className="arcade-chip text-cyan-200">Loading level...</div>
+          ) : null}
           <div>
             <p className="arcade-kicker mb-2">Builder</p>
             <h1 className="font-mono text-3xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">

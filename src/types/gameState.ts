@@ -17,8 +17,8 @@ export interface GameState {
 }
 
 export interface GameActions {
-  loadGame: (difficulty: Difficulty) => void;
-  handlePlayLevel: (id: string) => void;
-  resetGame: () => void;
+  loadGame: (difficulty: Difficulty) => Promise<void>;
+  handlePlayLevel: (id: string) => Promise<void>;
+  resetGame: () => Promise<void>;
   move: (direction: import("../game/movement").Direction) => void;
 }

@@ -1,23 +1,45 @@
+import { getSupabaseClient } from "../lib/supabase";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
 import { editorTiles } from "../constants/tiles";
 import type { Level, Tile } from "../types/level";
+import type { Json } from "../types/supabase";
 
-const STORAGE_KEY = "levelcrafter.levels";
+type LevelRow = {
+  id: string;
+  owner_id: string | null;
+  name: string;
+  difficulty: string;
+  width: number;
+  height: number;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+};
 
-function readAll(): Level[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) return [];
-
-    return JSON.parse(raw) as Level[];
-  } catch {
-    return [];
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function writeAll(levels: Level[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(levels));
+function mapLevelRow(row: LevelRow): Level {
+  if (!isRecord(row.metadata)) {
+    throw new Error("Level metadata is missing or invalid.");
+  }
+
+  const grid = row.metadata.grid;
+
+  if (!Array.isArray(grid)) {
+    throw new Error("Level metadata grid is missing or invalid.");
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    difficulty: row.difficulty as Difficulty,
+    createdAt: Date.parse(row.created_at),
+    width: row.width,
+    height: row.height,
+    grid: grid as Tile[][],
+  };
 }
 
 function genId() {
@@ -26,44 +48,85 @@ function genId() {
   )}`;
 }
 
-export function saveLevel(level: Omit<Level, "id" | "createdAt">): string {
-  const all = readAll();
+export async function saveLevel(level: Omit<Level, "id" | "createdAt">, levelId?: string): Promise<string> {
+  const supabase = getSupabaseClient();
+  const id = levelId ?? genId();
+  const { data: userData } = await supabase.auth.getUser();
+  const ownerId = userData.user?.id ?? null;
 
-  const id = genId();
-  const createdAt = Date.now();
+  console.log("LEVEL BEFORE SAVE", level);
 
-  const newLevel: Level = {
-    id,
-    createdAt,
-    ...level,
-  };
+  const { error } = await supabase.from("levels").upsert(
+    {
+      id,
+      owner_id: ownerId,
+      name: level.name,
+      difficulty: level.difficulty,
+      width: level.width,
+      height: level.height,
+      metadata: {
+        grid: level.grid,
+      },
+    },
+    { onConflict: "id" },
+  );
 
-  all.push(newLevel);
-
-  writeAll(all);
+  if (error) {
+    throw error;
+  }
 
   return id;
 }
 
-export function getLevelsByDifficulty(difficulty: "easy" | "medium" | "hard") {
-  return readAll().filter((level) => level.difficulty === difficulty);
+export async function getLevelsByDifficulty(difficulty: "easy" | "medium" | "hard") {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("levels")
+    .select("id, owner_id, name, difficulty, width, height, metadata, created_at, updated_at")
+    .eq("difficulty", difficulty)
+    .order("created_at", { ascending: true });
+
+  console.log("Requested Difficulty:", difficulty);
+  console.log("Supabase Data:", data);
+  console.log("Supabase Error:", error);
+
+  if (error) {
+    throw error;
+  }
+
+  const levels: Level[] = [];
+
+  for (const row of data ?? []) {
+    try {
+      levels.push(mapLevelRow(row as LevelRow));
+    } catch (error) {
+      console.warn("Skipping invalid level row:", row.id, row.name, error);
+    }
+  }
+
+  return levels;
 }
 
-export function getLevelById(id: string): Level | null {
-  const all = readAll();
+export async function getLevelById(id: string): Promise<Level | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("levels")
+    .select("id, owner_id, name, difficulty, width, height, metadata, created_at, updated_at")
+    .eq("id", id)
+    .maybeSingle();
 
-  return all.find((level) => level.id === id) ?? null;
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapLevelRow(data as LevelRow) : null;
 }
 
-export function importLevel(level: Omit<Level, "id" | "createdAt">): string {
+export async function importLevel(level: Omit<Level, "id" | "createdAt">): Promise<string> {
   return saveLevel(level);
 }
 
 const allowedTiles = new Set<Tile>(editorTiles);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function normalizeDifficulty(value: unknown, gridSize: number): Difficulty {
   if (
@@ -177,7 +240,7 @@ export function encodeLevelCode(level: Omit<Level, "id" | "createdAt">): string 
   return btoa(binary);
 }
 
-export function importLevelFromCode(code: string): string {
+export async function importLevelFromCode(code: string): Promise<string> {
   const binary = atob(code.trim());
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   const json = new TextDecoder().decode(bytes);

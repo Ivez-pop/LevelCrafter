@@ -16,6 +16,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/create" element={<CreateLevelPage />} />
+        <Route path="/create/:levelId" element={<CreateLevelPage />} />
         <Route path="/play" element={<PlayPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

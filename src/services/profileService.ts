@@ -67,6 +67,8 @@ export async function getAuthenticatedUser() {
     error,
   } = await supabase.auth.getUser();
 
+  console.log("AUTH GET USER:", user?.id, user);
+
   if (error) {
     throw error;
   }
@@ -79,76 +81,103 @@ export async function getAuthenticatedUser() {
 }
 
 export async function ensurePublicUserProfile(user: User): Promise<PublicUserRow> {
-  const supabase = getSupabaseClient();
-  const { data: existing, error: readError } = await supabase
-    .from("users")
-    .select("id, username, display_name, avatar_url, created_at, updated_at")
-    .eq("id", user.id)
-    .maybeSingle();
+  try {
+    const supabase = getSupabaseClient();
+    const { data: existing, error: readError } = await supabase
+      .from("users")
+      .select("id, username, display_name, avatar_url, created_at, updated_at")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  if (readError) {
-    throw readError;
+    if (readError) {
+      throw readError;
+    }
+
+    if (existing) {
+      return existing;
+    }
+
+    const username = resolveAuthenticatedUsername(user);
+    const payload = {
+      id: user.id,
+      username,
+      display_name: username,
+    };
+
+    console.log("AUTH USER", user);
+    console.log("AUTH USER ID", user?.id);
+    console.log("PAYLOAD", payload);
+
+    const result = await supabase.from("users").insert(payload);
+
+    console.log("RESULT", result);
+    console.log("ERROR", result?.error);
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    return {
+      id: user.id,
+      username,
+      display_name: username,
+      avatar_url: null,
+      created_at: user.created_at ?? new Date().toISOString(),
+      updated_at: user.updated_at ?? new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("FULL ERROR", error);
+    throw error;
   }
-
-  if (existing) {
-    return existing;
-  }
-
-  const username = resolveAuthenticatedUsername(user);
-
-  const { error: writeError } = await supabase.from("users").insert({
-    id: user.id,
-    username,
-    display_name: username,
-  });
-
-  if (writeError) {
-    throw writeError;
-  }
-
-  return {
-    id: user.id,
-    username,
-    display_name: username,
-    avatar_url: null,
-    created_at: user.created_at ?? new Date().toISOString(),
-    updated_at: user.updated_at ?? new Date().toISOString(),
-  };
 }
 
 export async function updateUsername(newUsername: string) {
-  const supabase = getSupabaseClient();
-  const user = await getAuthenticatedUser();
-  const username = newUsername.trim();
+  try {
+    const supabase = getSupabaseClient();
+    const user = await getAuthenticatedUser();
+    const username = newUsername.trim();
 
-  if (!username) {
-    throw new Error("Username cannot be empty.");
-  }
+    if (!username) {
+      throw new Error("Username cannot be empty.");
+    }
 
-  const { error: authError } = await supabase.auth.updateUser({
-    data: {
+    const { error: authError } = await supabase.auth.updateUser({
+      data: {
+        username,
+        display_name: username,
+      },
+    });
+
+    if (authError) {
+      throw authError;
+    }
+
+    const payload = {
       username,
       display_name: username,
-    },
-  });
+    };
 
-  if (authError) {
-    throw authError;
+    console.log("AUTH USER", user);
+    console.log("AUTH USER ID", user?.id);
+    console.log("PAYLOAD", payload);
+
+    const result = await supabase
+      .from("users")
+      .update(payload)
+      .eq("id", user.id);
+
+    console.log("RESULT", result);
+    console.log("ERROR", result?.error);
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    return ensurePublicUserProfile(user);
+  } catch (error) {
+    console.error("FULL ERROR", error);
+    throw error;
   }
-
-  const { error: profileError } = await supabase
-    .from("users")
-    .update({
-      username,
-      display_name: username,
-    })
-    .eq("id", user.id);
-
-  if (profileError) {
-    throw profileError;
-  }
-
-  return ensurePublicUserProfile(user);
 }
 
 export async function publishCreatedLevel(level: Level) {
@@ -172,8 +201,6 @@ export async function publishCreatedLevel(level: Level) {
         width: level.width,
         height: level.height,
         metadata: {
-          source: "localStorage",
-          createdAt: level.createdAt,
           grid: level.grid,
         },
       },
