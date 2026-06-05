@@ -234,13 +234,13 @@ function CreateLevelPage() {
             </h1>
           </div>
 
-          <section>
+          <section className="space-y-2">
             <h3 className="arcade-section-label">Difficulty</h3>
 
             <DifficultySelector onSelect={createGrid} />
 
             {difficulty && (
-              <div className="arcade-chip mt-3 bg-yellow-300 text-black">
+              <div className="arcade-chip inline-flex bg-yellow-300 text-black">
                 {difficulty.toUpperCase()}
               </div>
             )}

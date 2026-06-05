@@ -7,6 +7,7 @@ export type Difficulty = "easy" | "medium" | "hard";
 export interface GameState {
   level: Level | null;
   player: Position | null;
+  explosion: Position | null;
   collected: number;
   moves: number;
   status: GameStatus;

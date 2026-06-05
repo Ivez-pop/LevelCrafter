@@ -26,7 +26,7 @@ export function GameControls({ difficulty, collected, message, onSelectDifficult
         </div>
 
         <p className="border-2 border-cyan-300 bg-black px-4 py-2 font-mono text-xs font-bold uppercase text-cyan-200 shadow-[3px_3px_0px_#000]">
-          Use W/A/S/D to move
+          Use W/A/S/D or Drag to move
         </p>
 
         {message && (

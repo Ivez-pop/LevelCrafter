@@ -10,34 +10,18 @@ function formatElapsedTime(totalSeconds: number) {
 
 export function useGameTimer(levelId: string | null, status: GameStatus) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const previousLevelId = useRef<string | null>(levelId);
-  const previousStatus = useRef<GameStatus>(status);
 
+  // Reset timer to 0 when starting or restarting a game
   useEffect(() => {
-    if (previousLevelId.current !== levelId) {
-      previousLevelId.current = levelId;
+    if (!levelId || status === "idle") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setElapsedSeconds(0);
     }
-
-    if (!levelId) {
-      setElapsedSeconds(0);
-    }
-  }, [levelId]);
-
-  useEffect(() => {
-    if (status === "restart") {
-      setElapsedSeconds(0);
-    }
-
-    if (levelId && previousStatus.current === "win" && status !== "win") {
-      setElapsedSeconds(0);
-    }
-
-    previousStatus.current = status;
   }, [levelId, status]);
 
   useEffect(() => {
-    if (!levelId || status === "win") {
+    // Freeze the timer if we are in an end-game or idle state
+    if (!levelId || status === "win" || status === "restart" || status === "idle") {
       return;
     }
 
@@ -46,6 +30,26 @@ export function useGameTimer(levelId: string | null, status: GameStatus) {
     }, 1000);
 
     return () => window.clearInterval(intervalId);
+  }, [levelId, status]);
+
+  // We need to detect when the user hits 'Retry' or plays a new level,
+  // which transitions the status to "continue" from an end-game state.
+  const previousStatus = useRef<GameStatus>(status);
+  const previousLevelId = useRef<string | null>(levelId);
+
+  useEffect(() => {
+    const isNewLevel = previousLevelId.current !== levelId;
+    const isRestarting =
+      (previousStatus.current === "restart" || previousStatus.current === "win") &&
+      status === "continue";
+
+    if (isNewLevel || isRestarting) {
+       
+      setElapsedSeconds(0);
+    }
+
+    previousStatus.current = status;
+    previousLevelId.current = levelId;
   }, [levelId, status]);
 
   return formatElapsedTime(elapsedSeconds);

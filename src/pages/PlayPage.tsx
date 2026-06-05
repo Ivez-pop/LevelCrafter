@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { ChangeEvent } from "react";
 import type { Tile } from "../types/level";
 import { useGame } from "../features/play/hooks/useGame";
@@ -22,6 +23,22 @@ function PlayPage() {
   const timer = useGameTimer(game.level?.id ?? null, game.status);
   const [leaderboardLevel, setLeaderboardLevel] = useState<Level | null>(null);
   const [levelCode, setLevelCode] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [buttonGroup, setButtonGroup] = useState<Element | null>(null);
+
+  useEffect(() => {
+    if (!game.level && controlsRef.current) {
+      const buttons = Array.from(controlsRef.current.querySelectorAll("button"));
+      const hardBtn = buttons.find((b) => b.textContent?.toUpperCase().includes("HARD"));
+      if (hardBtn && hardBtn.parentElement) {
+        setButtonGroup(hardBtn.parentElement);
+      }
+    } else {
+      setButtonGroup(null);
+    }
+  }, [game.level, game.difficulty]);
 
   useKeyboardControls(game.move);
 
@@ -48,6 +65,7 @@ function PlayPage() {
       alert(err instanceof Error ? err.message : "Invalid level file!");
     } finally {
       event.target.value = "";
+      setIsImportOpen(false);
     }
   };
 
@@ -55,6 +73,7 @@ function PlayPage() {
     try {
       startImportedLevel(importLevelFromCode(levelCode));
       setLevelCode("");
+      setIsImportOpen(false);
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Invalid level code!");
@@ -78,41 +97,33 @@ function PlayPage() {
 
       {!game.level ? (
         <div className="mx-auto max-w-5xl">
-          <div className="arcade-panel p-4 sm:p-6">
+          <div className="arcade-panel p-4 sm:p-6" ref={controlsRef}>
             <GameControls
               difficulty={game.difficulty}
               collected={game.collected}
               message={game.message}
               onSelectDifficulty={game.loadGame}
             />
-
-            <div className="mt-4">
-              <label className="arcade-button-violet cursor-pointer">
-                IMPORT JSON
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportJson}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-              <textarea
-                value={levelCode}
-                onChange={(event) => setLevelCode(event.target.value)}
-                placeholder="Paste share code"
-                className="arcade-input min-h-20 text-xs"
-              />
-              <button
-                onClick={handleImportCode}
-                disabled={!levelCode.trim()}
-                className="arcade-button-cyan disabled:opacity-50"
-              >
-                Import Code
-              </button>
-            </div>
+            {buttonGroup ? (
+              createPortal(
+                <button
+                  onClick={() => setIsImportOpen(true)}
+                  className="arcade-button-violet whitespace-nowrap"
+                >
+                  IMPORT
+                </button>,
+                buttonGroup
+              )
+            ) : (
+              <div className="mt-4 flex">
+                <button
+                  onClick={() => setIsImportOpen(true)}
+                  className="arcade-button-violet whitespace-nowrap"
+                >
+                  IMPORT
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="mt-8">
@@ -128,6 +139,50 @@ function PlayPage() {
                 onClose={() => setLeaderboardLevel(null)}
               />
             ) : null}
+
+            {isImportOpen && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 sm:p-6">
+                <div className="arcade-panel w-full max-w-2xl p-6 sm:p-8">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="arcade-section-label !mb-0">Import Level</h2>
+                    <button
+                      onClick={() => setIsImportOpen(false)}
+                      className="font-mono text-2xl font-black text-rose-400 hover:text-rose-300"
+                    >
+                      X
+                    </button>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="arcade-button-violet block cursor-pointer text-center">
+                      IMPORT JSON
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportJson}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4 grid items-start gap-3 sm:grid-cols-[1fr_auto]">
+                    <textarea
+                      value={levelCode}
+                      onChange={(event) => setLevelCode(event.target.value)}
+                      placeholder="Paste share code"
+                      className="arcade-input min-h-48 text-sm"
+                    />
+                    <button
+                      onClick={handleImportCode}
+                      disabled={!levelCode.trim()}
+                      className="arcade-button-cyan disabled:opacity-50"
+                    >
+                      Import Code
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -148,26 +203,39 @@ function PlayPage() {
             </div>
           </div>
 
-          <div className="arcade-panel flex justify-center p-3 sm:p-8">
+          <div className="relative arcade-panel flex justify-center p-3 sm:p-8">
             <div className="arcade-panel-deep max-w-full overflow-x-auto p-3 sm:p-6">
               <GameBoard
                 width={game.level.width}
                 grid={renderedGrid}
+                player={game.player}
+                explosion={game.explosion}
                 getTileStyle={getTileStyle}
+                onMove={game.move}
               />
             </div>
-          </div>
 
-          <div className="arcade-panel mt-6 p-4">
             <GameStatus
               status={game.status}
-              onPlayAgain={() =>
-                game.level && game.handlePlayLevel(game.level.id)
-              }
-              onReturnToLevelSelection={() =>
-                game.difficulty && game.loadGame(game.difficulty)
-              }
+              level={game.level}
+              timer={timer}
+              collected={game.collected}
+              moves={game.moves}
+              onPlayAgain={() => game.level && game.handlePlayLevel(game.level.id)}
+              onReturnToLevelSelection={() => game.difficulty && game.loadGame(game.difficulty)}
+              onOpenLeaderboard={setLeaderboardLevel}
             />
+
+            {leaderboardLevel ? (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 sm:p-6">
+                <div className="w-full max-w-3xl max-h-full overflow-y-auto">
+                  <LeaderboardPlaceholder
+                    level={leaderboardLevel}
+                    onClose={() => setLeaderboardLevel(null)}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

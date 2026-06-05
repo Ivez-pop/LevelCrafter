@@ -1,5 +1,15 @@
 import type { Tile } from "../../../types/level";
-import { editorTiles, tileLabels } from "../../../constants/tiles";
+import { TileArtwork } from "../../tiles/TileArtwork";
+import { tileLabels } from "../../../constants/tiles";
+
+const editorPaletteTiles: Tile[] = [
+  "wall",
+  "coin",
+  "exit",
+  "hazard",
+  "player",
+  "empty",
+];
 
 interface TilePaletteProps {
   selectedTile: Tile;
@@ -8,18 +18,31 @@ interface TilePaletteProps {
 
 function TilePalette({ selectedTile, onSelect }: TilePaletteProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
-      {editorTiles.map((tile) => (
+    <div className="mx-auto grid max-w-[280px] grid-cols-2 gap-1.5 min-[300px]:grid-cols-3">
+      {editorPaletteTiles.map((tile) => (
         <button
           key={tile}
           onClick={() => onSelect(tile)}
-          className={`border-4 border-black px-3 py-3 font-mono text-xs font-black uppercase shadow-[4px_4px_0px_#000] transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000] ${
+          className={`group overflow-hidden border-2 border-black bg-[#12122f] p-0.5 text-left shadow-[2px_2px_0px_#000] transition-transform hover:-translate-y-0.5 active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0px_#000] ${
             selectedTile === tile
-              ? "bg-yellow-300 text-black"
-              : "bg-[#12122f] text-cyan-100 hover:bg-[#1b1b49]"
+              ? "border-yellow-300 bg-yellow-300 ring-2 ring-white"
+              : "hover:bg-[#1b1b49]"
           }`}
         >
-          {tileLabels[tile]}
+          <div
+            className={`flex aspect-square items-center justify-center border border-black ${
+              selectedTile === tile ? "bg-black/10" : "bg-black/25"
+            }`}
+          >
+            <TileArtwork tile={tile} className="h-full w-full" imageClassName="p-0.5" />
+          </div>
+          <div
+            className={`mt-0.5 px-0 text-center font-mono text-[8px] font-black uppercase leading-3 ${
+              selectedTile === tile ? "text-black" : "text-cyan-100"
+            }`}
+          >
+            {tileLabels[tile]}
+          </div>
         </button>
       ))}
     </div>

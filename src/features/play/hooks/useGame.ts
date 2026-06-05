@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Level, Position, Tile } from "../../../types/level";
 import type { GameState, GameActions, Difficulty } from "../../../types/gameState";
 import type { Direction } from "../../../game/movement";
@@ -102,6 +102,8 @@ export function useGame(): GameState & GameActions {
   const movesRef = useRef(0);
   const startedAtRef = useRef<number | null>(null);
   const dynamicDirectionsRef = useRef(new Map<string, DynamicDirection>());
+  const explosionTimeoutRef = useRef<number | null>(null);
+  const [explosion, setExplosion] = useState<Position | null>(null);
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const [message, setMessage] = useState("");
 
@@ -123,6 +125,11 @@ export function useGame(): GameState & GameActions {
     movesRef.current = 0;
     startedAtRef.current = null;
     dynamicDirectionsRef.current = new Map();
+    if (explosionTimeoutRef.current !== null) {
+      window.clearTimeout(explosionTimeoutRef.current);
+      explosionTimeoutRef.current = null;
+    }
+    setExplosion(null);
     setMoves(0);
     setStatus("idle");
     setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
@@ -148,10 +155,28 @@ export function useGame(): GameState & GameActions {
     movesRef.current = 0;
     startedAtRef.current = Date.now();
     dynamicDirectionsRef.current = new Map();
+    setExplosion(null);
     setMoves(0);
-    setStatus("restart");
-    setMessage("Hazard hit! Level restarted.");
+    setStatus("continue");
+    setMessage("");
   }, [difficulty, level]);
+
+  const triggerHazardReset = useCallback((position: Position) => {
+    if (explosionTimeoutRef.current !== null) {
+      window.clearTimeout(explosionTimeoutRef.current);
+      explosionTimeoutRef.current = null;
+    }
+
+    setExplosion(position);
+    setMessage("Boom!");
+
+    explosionTimeoutRef.current = window.setTimeout(() => {
+      explosionTimeoutRef.current = null;
+      setExplosion(null);
+      setStatus("restart");
+      setMessage("GAME OVER");
+    }, 500);
+  }, []);
 
   const move = useCallback((direction: Direction) => {
     console.log("[useGame] move", direction, { level: level?.id, player, status });
@@ -161,7 +186,7 @@ export function useGame(): GameState & GameActions {
       return;
     }
 
-    if (status === "win") {
+    if (status === "win" || status === "restart") {
       console.log("[useGame] move blocked by win status");
       return;
     }
@@ -181,7 +206,7 @@ export function useGame(): GameState & GameActions {
     const nextPosition = result.player;
 
     if (result.event === "restart") {
-      resetGame();
+      triggerHazardReset(nextPosition);
       return;
     }
 
@@ -200,7 +225,7 @@ export function useGame(): GameState & GameActions {
       );
 
       if (advanced.hitPlayer) {
-        resetGame();
+        triggerHazardReset(nextPosition);
         return;
       }
 
@@ -241,7 +266,7 @@ export function useGame(): GameState & GameActions {
     );
 
     if (advanced.hitPlayer) {
-      resetGame();
+      triggerHazardReset(nextPosition);
       return;
     }
 
@@ -250,7 +275,7 @@ export function useGame(): GameState & GameActions {
     setPlayer(nextPosition);
     setStatus("continue");
     setMessage("");
-  }, [level, player, status, collected, resetGame]);
+  }, [level, player, status, collected, triggerHazardReset]);
 
   const handlePlayLevel = useCallback((id: string) => {
     console.log("[useGame] handlePlayLevel", id);
@@ -276,6 +301,15 @@ export function useGame(): GameState & GameActions {
     }
   }, []);
 
+  const clearExplosionTimeout = useCallback(() => {
+    if (explosionTimeoutRef.current !== null) {
+      window.clearTimeout(explosionTimeoutRef.current);
+      explosionTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearExplosionTimeout, [clearExplosionTimeout]);
+
   return {
     level,
     player,
@@ -285,6 +319,7 @@ export function useGame(): GameState & GameActions {
     difficulty,
     message,
     levels,
+    explosion,
     loadGame,
     handlePlayLevel,
     resetGame,

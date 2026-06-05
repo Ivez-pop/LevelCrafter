@@ -3,6 +3,7 @@ import type { Tile } from "../../types/level";
 import wall from "../../../tiles/wall.jpg";
 import coin from "../../../tiles/coin.png";
 import hazard from "../../../tiles/bomb.png";
+import blast from "../../../tiles/blast.png";
 import player from "../../../tiles/player.png";
 import exit from "../../../tiles/trophy.png";
 import floorSrc from "../../../tiles/tile.png";
@@ -16,6 +17,11 @@ export interface TileAsset {
 export const floorTile = {
   src: floorSrc,
   alt: "Floor tile",
+};
+
+export const blastTile = {
+  src: blast,
+  alt: "Explosion blast",
 };
 
 const tileAssets: Record<Tile, TileAsset> = {
