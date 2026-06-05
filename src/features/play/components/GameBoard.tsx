@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { Tile, Position } from "../../../types/level";
 import type { Direction } from "../../../game/movement";
+import type { VentDestination } from "../../../types/gameState";
 import { TileArtwork } from "../../tiles/TileArtwork";
 import { blastTile } from "../../tiles/tileAssets";
 
@@ -11,9 +12,22 @@ interface GameBoardProps {
   explosion: Position | null;
   getTileStyle: (tile: Tile) => string;
   onMove: (direction: Direction) => void;
+  onSelectVentDestination?: (destination: VentDestination) => void;
+  isSelectingVent?: boolean;
+  availableVentDestinations?: VentDestination[];
 }
 
-export function GameBoard({ width, grid, player, explosion, getTileStyle, onMove }: GameBoardProps) {
+export function GameBoard({
+  width,
+  grid,
+  player,
+  explosion,
+  getTileStyle,
+  onMove,
+  onSelectVentDestination,
+  isSelectingVent = false,
+  availableVentDestinations = [],
+}: GameBoardProps) {
   const dragState = useRef<{
     pointerId: number | null;
     lastRow: number;
@@ -152,6 +166,13 @@ export function GameBoard({ width, grid, player, explosion, getTileStyle, onMove
     };
   }, [dragPointerId]);
 
+  const destinationByKey = new Map(
+    availableVentDestinations.map((destination) => [
+      `${destination.x},${destination.y}`,
+      destination,
+    ]),
+  );
+
   return (
     <div className="border-4 border-black bg-black p-2 shadow-[8px_8px_0px_#000] sm:p-3">
       <div
@@ -167,7 +188,16 @@ export function GameBoard({ width, grid, player, explosion, getTileStyle, onMove
               data-row={rowIndex}
               data-col={colIndex}
               onPointerDown={
-                player?.x === colIndex && player?.y === rowIndex
+                isSelectingVent && destinationByKey.has(`${colIndex},${rowIndex}`)
+                  ? (event) => {
+                      event.preventDefault();
+                      const destination = destinationByKey.get(`${colIndex},${rowIndex}`);
+
+                      if (destination) {
+                        onSelectVentDestination?.(destination);
+                      }
+                    }
+                  : player?.x === colIndex && player?.y === rowIndex
                   ? handlePointerDown
                   : undefined
               }
@@ -181,10 +211,14 @@ export function GameBoard({ width, grid, player, explosion, getTileStyle, onMove
                   w-full
                   arcade-tile
                   ${getTileStyle(cell)}
+                  ${isSelectingVent && destinationByKey.has(`${colIndex},${rowIndex}`) ? "ring-4 ring-cyan-300 ring-inset cursor-pointer" : ""}
                 `
               }
             >
               <TileArtwork tile={cell} className="h-full w-full" imageClassName="p-0.5" />
+              {isSelectingVent && cell === "vent" && destinationByKey.has(`${colIndex},${rowIndex}`) ? (
+                <div className="absolute inset-0 z-10 bg-cyan-300/15" />
+              ) : null}
               {explosion?.x === colIndex && explosion?.y === rowIndex ? (
                 <img
                   src={blastTile.src ?? undefined}

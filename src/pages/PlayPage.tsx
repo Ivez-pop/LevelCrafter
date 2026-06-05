@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import type { ChangeEvent } from "react";
 import type { Tile } from "../types/level";
@@ -17,11 +18,11 @@ import {
   importLevelFromCode,
   importLevelFromJson,
 } from "../services/levelStorage";
-import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function PlayPage() {
   const game = useGame();
   const timer = useGameTimer(game.level?.id ?? null, game.status);
+  const navigate = useNavigate();
   const [leaderboardLevel, setLeaderboardLevel] = useState<Level | null>(null);
   const [levelCode, setLevelCode] = useState("");
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -94,8 +95,13 @@ function PlayPage() {
 
   return (
     <div className="arcade-screen">
-      <GlobalPageNavigation />
-      <h1 className="arcade-title mb-6">PLAY LEVELS</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="arcade-title !mb-0">PLAY LEVELS</h1>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
+          <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
+        </div>
+      </div>
 
       {!game.level ? (
         <div className="mx-auto max-w-5xl">
@@ -214,6 +220,9 @@ function PlayPage() {
                 explosion={game.explosion}
                 getTileStyle={getTileStyle}
                 onMove={game.move}
+                onSelectVentDestination={game.selectVentDestination}
+                isSelectingVent={game.isSelectingVent}
+                availableVentDestinations={game.ventDestinations}
               />
             </div>
 

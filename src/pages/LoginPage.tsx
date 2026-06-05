@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getSupabaseClient } from "../lib/supabase";
-import GlobalPageNavigation from "../components/GlobalPageNavigation";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,9 +27,13 @@ function LoginPage() {
   };
 
   return (
-    <div className="arcade-screen flex items-center justify-center">
-      <GlobalPageNavigation />
-      <div className="arcade-panel w-full max-w-md p-8">
+    <div className="arcade-screen flex min-h-screen flex-col">
+      <div className="flex justify-end gap-3 p-4 sm:p-6">
+        <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
+        <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
+      </div>
+      <div className="flex flex-grow items-center justify-center p-4">
+        <div className="arcade-panel w-full max-w-md p-8">
         <p className="arcade-kicker mb-2">Account Access</p>
 
         <h1 className="mb-8 font-mono text-4xl font-black uppercase text-yellow-300">
@@ -66,6 +69,7 @@ function LoginPage() {
         <Link to="/register" className="mt-3 block text-center">
           <span className="arcade-button-yellow inline-block">Register</span>
         </Link>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,11 @@ export type GameStatus = "idle" | "blocked" | "continue" | "collect" | "restart"
 
 export type Difficulty = "easy" | "medium" | "hard";
 
+export interface VentDestination {
+  x: number;
+  y: number;
+}
+
 export interface GameState {
   level: Level | null;
   player: Position | null;
@@ -14,6 +19,8 @@ export interface GameState {
   difficulty: Difficulty | null;
   message: string;
   levels: Level[];
+  isSelectingVent: boolean;
+  ventDestinations: VentDestination[];
 }
 
 export interface GameActions {
@@ -21,4 +28,5 @@ export interface GameActions {
   handlePlayLevel: (id: string) => Promise<void>;
   resetGame: () => Promise<void>;
   move: (direction: import("../game/movement").Direction) => void;
+  selectVentDestination: (destination: VentDestination) => void;
 }
