@@ -6,6 +6,7 @@ const editorPaletteTiles: Tile[] = [
   "wall",
   "coin",
   "exit",
+  "vent",
   "hazard",
   "player",
   "empty",

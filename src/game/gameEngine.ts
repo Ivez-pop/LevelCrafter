@@ -1,6 +1,7 @@
 import type {
   Level,
   Position,
+  Tile,
 } from "../types/level";
 
 import {
@@ -16,6 +17,32 @@ import {
 import {
   evaluateTile,
 } from "./rules";
+
+function getVentDestination(level: Level, entry: Position): Position {
+  const vents: Position[] = [];
+
+  level.grid.forEach((row: Tile[], y: number) => {
+    row.forEach((tile: Tile, x: number) => {
+      if (tile === "vent") {
+        vents.push({ x, y });
+      }
+    });
+  });
+
+  if (vents.length < 2) {
+    return entry;
+  }
+
+  const entryIndex = vents.findIndex(
+    (vent) => vent.x === entry.x && vent.y === entry.y,
+  );
+
+  if (entryIndex === -1) {
+    return entry;
+  }
+
+  return vents[(entryIndex + 1) % vents.length];
+}
 
 export function processMove(
   level: Level,
@@ -48,9 +75,10 @@ export function processMove(
       next.x,
       next.y
     );
+  const event = evaluateTile(tile);
 
   return {
-    player: next,
-    event: evaluateTile(tile),
+    player: event === "vent" ? getVentDestination(level, next) : next,
+    event,
   };
 }

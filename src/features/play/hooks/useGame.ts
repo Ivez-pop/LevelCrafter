@@ -7,6 +7,7 @@ import { getPlayerStart } from "../../../game/spawn";
 import { getLevelsByDifficulty, getLevelById } from "../../../services/levelStorage";
 import { recordCompletedLevel } from "../../../services/gameplayService";
 import { isDynamicDangerTile } from "../../../constants/tiles";
+import { retroAudio } from "../../../audio/retroAudio";
 
 type DynamicDirection = { dx: number; dy: number };
 
@@ -169,6 +170,7 @@ export function useGame(): GameState & GameActions {
 
     setExplosion(position);
     setMessage("Boom!");
+    retroAudio.playDeath();
 
     explosionTimeoutRef.current = window.setTimeout(() => {
       explosionTimeoutRef.current = null;
@@ -200,6 +202,7 @@ export function useGame(): GameState & GameActions {
     if (result.event === "blocked") {
       setStatus("blocked");
       setMessage("Blocked by a wall.");
+      retroAudio.playBlocked();
       return;
     }
 
@@ -235,6 +238,7 @@ export function useGame(): GameState & GameActions {
       setPlayer(nextPosition);
       setStatus("collect");
       setMessage("Coin collected!");
+      retroAudio.playCoin();
       return;
     }
 
@@ -256,6 +260,28 @@ export function useGame(): GameState & GameActions {
       setPlayer(nextPosition);
       setStatus("win");
       setMessage("You win! Congratulations.");
+      retroAudio.playWin();
+      return;
+    }
+
+    if (result.event === "vent") {
+      const advanced = advanceDynamicDangers(
+        level.grid,
+        nextPosition,
+        dynamicDirectionsRef.current,
+      );
+
+      if (advanced.hitPlayer) {
+        triggerHazardReset(nextPosition);
+        return;
+      }
+
+      dynamicDirectionsRef.current = advanced.directions;
+      setLevel({ ...level, grid: advanced.grid });
+      setPlayer(nextPosition);
+      setStatus("continue");
+      setMessage("Vent jump!");
+      retroAudio.playMove();
       return;
     }
 
@@ -275,6 +301,7 @@ export function useGame(): GameState & GameActions {
     setPlayer(nextPosition);
     setStatus("continue");
     setMessage("");
+    retroAudio.playMove();
   }, [level, player, status, collected, triggerHazardReset]);
 
   const handlePlayLevel = useCallback((id: string) => {

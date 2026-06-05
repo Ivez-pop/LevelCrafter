@@ -5,6 +5,7 @@ export type GameResult =
   | "continue"
   | "collect"
   | "restart"
+  | "vent"
   | "win";
 
 export function evaluateTile(
@@ -22,6 +23,9 @@ export function evaluateTile(
 
     case "hazard":
       return "restart";
+
+    case "vent":
+      return "vent";
 
     case "exit":
       return "win";
