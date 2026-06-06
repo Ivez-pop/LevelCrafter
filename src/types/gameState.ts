@@ -3,6 +3,7 @@ import type { FacingDirection } from "../game/movement";
 import type { ScoreBreakdown } from "./leaderboard";
 
 export type GameStatus = "idle" | "blocked" | "continue" | "collect" | "restart" | "win";
+export type DeathReason = "fire" | "bomb" | "generic";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -20,6 +21,7 @@ export interface GameState {
   countdownValue: string | null;
   scoreBreakdown: ScoreBreakdown | null;
   explosion: Position | null;
+  deathReason: DeathReason | null;
   collected: number;
   moves: number;
   status: GameStatus;

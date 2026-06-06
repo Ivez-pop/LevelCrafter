@@ -257,6 +257,7 @@ function PlayPage() {
 
             <GameStatus
               status={game.status}
+              deathReason={game.deathReason}
               level={game.level}
               timer={timer}
               collected={game.collected}

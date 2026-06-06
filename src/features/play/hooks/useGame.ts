@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Level, Position, Tile } from "../../../types/level";
-import type { GameState, GameActions, Difficulty, VentDestination } from "../../../types/gameState";
+import type { GameState, GameActions, Difficulty, VentDestination, DeathReason } from "../../../types/gameState";
 import type { Direction } from "../../../game/movement";
 import { getVentDestinations, processMove } from "../../../game/gameEngine";
 import { getPlayerStart } from "../../../game/spawn";
@@ -144,6 +144,7 @@ export function useGame(): GameState & GameActions {
   const bombFadeTimeoutRef = useRef<number | null>(null);
   const countdownStepRefs = useRef<number[]>([]);
   const [explosion, setExplosion] = useState<Position | null>(null);
+  const [deathReason, setDeathReason] = useState<DeathReason | null>(null);
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const [message, setMessage] = useState("");
   const [isSelectingVent, setIsSelectingVent] = useState(false);
@@ -239,6 +240,20 @@ export function useGame(): GameState & GameActions {
     }, 500);
   }, [clearMovementTimeout]);
 
+  const setDeathFromTile = useCallback((tile: Tile | null | undefined) => {
+    if (tile === "movingFireHorizontal" || tile === "movingFireVertical") {
+      setDeathReason("fire");
+      return;
+    }
+
+    if (tile === "hazard") {
+      setDeathReason("bomb");
+      return;
+    }
+
+    setDeathReason("generic");
+  }, []);
+
   const enterVentSelection = useCallback(
     (entry: Position, levelToUse: Level) => {
       const destinations = getVentDestinations(levelToUse, entry);
@@ -278,6 +293,7 @@ export function useGame(): GameState & GameActions {
       explosionTimeoutRef.current = null;
     }
     setExplosion(null);
+    setDeathReason(null);
     setMoves(0);
     setStatus("idle");
     setShowBombs(true);
@@ -317,6 +333,7 @@ export function useGame(): GameState & GameActions {
     setStatus("continue");
     setMessage("");
     setScoreBreakdown(null);
+    setDeathReason(null);
     startCountdown(reloaded.bombPreviewSeconds ?? DEFAULT_BOMB_PREVIEW_SECONDS);
   }, [clearCountdownTimeout, clearMovementTimeout, difficulty, level, startCountdown]);
 
@@ -359,6 +376,7 @@ export function useGame(): GameState & GameActions {
     pulseMovement();
 
     if (result.event === "restart") {
+      setDeathFromTile(level.grid[nextPosition.y]?.[nextPosition.x]);
       setShowBombs(true);
       triggerHazardReset(nextPosition);
       return;
@@ -376,6 +394,7 @@ export function useGame(): GameState & GameActions {
       setLevel({ ...level, grid: updatedGrid });
       setCollected((count) => count + 1);
       setPlayer(nextPosition);
+      setDeathReason(null);
       setStatus("collect");
       setMessage("Coin collected!");
       retroAudio.playCoin();
@@ -406,6 +425,7 @@ export function useGame(): GameState & GameActions {
       });
 
       setPlayer(nextPosition);
+      setDeathReason(null);
       setStatus("win");
       setMessage("You win! Congratulations.");
       retroAudio.playWin();
@@ -420,6 +440,7 @@ export function useGame(): GameState & GameActions {
     }
 
     setPlayer(nextPosition);
+    setDeathReason(null);
     setStatus("continue");
     setMessage("");
     retroAudio.playMove();
@@ -509,6 +530,7 @@ export function useGame(): GameState & GameActions {
 
         if (advanced.hitPlayer) {
           clearVentSelection();
+          setDeathFromTile(advanced.grid[player.y]?.[player.x]);
           triggerHazardReset(player);
         }
 
@@ -565,11 +587,12 @@ export function useGame(): GameState & GameActions {
     isPlayerMoving,
     showBombs,
     countdownValue,
-    scoreBreakdown,
-    collected,
-    moves,
-    status,
-    difficulty,
+      scoreBreakdown,
+      collected,
+      moves,
+      status,
+      deathReason,
+      difficulty,
     message,
     levels,
     explosion,

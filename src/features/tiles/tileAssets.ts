@@ -26,6 +26,11 @@ export const blastTile = {
   alt: "Explosion blast",
 };
 
+export const fireTile = {
+  src: fire,
+  alt: "Fire tile",
+};
+
 const tileAssets: Record<Tile, TileAsset> = {
   empty: {
     src: null,

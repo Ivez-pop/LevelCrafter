@@ -1,10 +1,12 @@
 import { TileArtwork } from "../../tiles/TileArtwork";
-import { blastTile } from "../../tiles/tileAssets";
+import { blastTile, fireTile } from "../../tiles/tileAssets";
 import type { Level } from "../../../types/level";
 import type { ScoreBreakdown } from "../../../types/leaderboard";
+import type { DeathReason } from "../../../types/gameState";
 
 interface GameStatusProps {
   status: "idle" | "blocked" | "continue" | "collect" | "restart" | "win";
+  deathReason?: DeathReason | null;
   level: Level | null;
   timer: string;
   collected: number;
@@ -22,6 +24,7 @@ export function GameStatus({
   collected,
   moves,
   scoreBreakdown,
+  deathReason,
   onPlayAgain,
   onReturnToLevelSelection,
   onOpenLeaderboard,
@@ -31,6 +34,7 @@ export function GameStatus({
   }
 
   const isWin = status === "win";
+  const isFireDeath = !isWin && deathReason === "fire";
 
   return (
     <div className="fixed inset-0 z-50 flex overflow-y-auto overflow-x-hidden bg-black/80 p-4 md:p-6">
@@ -44,8 +48,8 @@ export function GameStatus({
                 </div>
               ) : (
                 <img
-                  src={blastTile.src ?? undefined}
-                  alt={blastTile.alt}
+                  src={isFireDeath ? (fireTile.src ?? undefined) : (blastTile.src ?? undefined)}
+                  alt={isFireDeath ? fireTile.alt : blastTile.alt}
                   draggable={false}
                   className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 object-cover pixelated"
                 />
@@ -57,7 +61,7 @@ export function GameStatus({
             </h2>
 
             <p className="mt-2 md:mt-4 font-mono text-sm sm:text-lg md:text-2xl font-bold uppercase text-white drop-shadow-[2px_2px_0px_#000]">
-              {isWin ? "Excellent work." : "The hazard got you."}
+              {isWin ? "Excellent work." : isFireDeath ? "Thunder got you." : "The hazard got you."}
             </p>
 
             <div className="mx-auto mt-4 sm:mt-6 md:mt-8 w-full max-w-2xl border-[2px] sm:border-[3px] md:border-[4px] border-cyan-400 bg-[#0a0a1f] p-3 sm:p-4 md:p-6 text-left font-mono text-xs sm:text-base md:text-xl font-bold uppercase text-cyan-100 shadow-[3px_3px_0px_#000] md:shadow-[6px_6px_0px_#000]">
