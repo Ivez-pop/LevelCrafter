@@ -202,12 +202,8 @@ export function useGame(): GameState & GameActions {
 
       countdownTimeoutRef.current = window.setTimeout(() => {
         countdownTimeoutRef.current = null;
-        setCountdownValue("GO!");
-        bombFadeTimeoutRef.current = window.setTimeout(() => {
-          bombFadeTimeoutRef.current = null;
-          setShowBombs(false);
-          setCountdownValue(null);
-        }, 320);
+        setShowBombs(false);
+        setCountdownValue(null);
       }, 1000 * clampedSeconds);
     },
     [clearCountdownTimeout],

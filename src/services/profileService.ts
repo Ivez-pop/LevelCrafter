@@ -235,6 +235,7 @@ export async function publishCreatedLevel(level: Level) {
         height: level.height,
         metadata: {
           grid: level.grid,
+          bombPreviewSeconds: level.bombPreviewSeconds ?? 3,
         },
       },
       { onConflict: "id" },
