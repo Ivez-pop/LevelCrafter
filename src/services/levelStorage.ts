@@ -26,15 +26,22 @@ function mapLevelRow(row: LevelRow): Level {
   }
 
   const grid = row.metadata.grid;
+  const bombPreviewSeconds = row.metadata.bombPreviewSeconds;
 
   if (!Array.isArray(grid)) {
     throw new Error("Level metadata grid is missing or invalid.");
   }
 
+  const normalizedBombPreviewSeconds =
+    typeof bombPreviewSeconds === "number" && Number.isFinite(bombPreviewSeconds) && bombPreviewSeconds >= 1
+      ? bombPreviewSeconds
+      : 3;
+
   return {
     id: row.id,
     name: row.name,
     difficulty: row.difficulty as Difficulty,
+    bombPreviewSeconds: normalizedBombPreviewSeconds,
     createdAt: Date.parse(row.created_at),
     width: row.width,
     height: row.height,
@@ -73,6 +80,7 @@ export async function saveLevel(level: Omit<Level, "id" | "createdAt">, levelId?
       height: level.height,
       metadata: {
         grid: level.grid,
+        bombPreviewSeconds: level.bombPreviewSeconds ?? 3,
       },
     },
     { onConflict: "id" },
@@ -83,6 +91,32 @@ export async function saveLevel(level: Omit<Level, "id" | "createdAt">, levelId?
   }
 
   return id;
+}
+
+export async function deleteLevel(levelId: string) {
+  const supabase = getSupabaseClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const ownerId = userData.user?.id ?? null;
+
+  if (!ownerId) {
+    throw new Error("You must be logged in to delete a level.");
+  }
+
+  const { error, count } = await supabase
+    .from("levels")
+    .delete({ count: "exact" })
+    .eq("id", levelId)
+    .eq("owner_id", ownerId);
+
+  if (error) {
+    throw error;
+  }
+
+  if (count === 0) {
+    throw new Error("Level not found or you do not have permission to delete it.");
+  }
+
+  return true;
 }
 
 export async function getLevelsByDifficulty(difficulty: "easy" | "medium" | "hard") {
@@ -253,6 +287,10 @@ function normalizeImportedLevel(value: unknown): Omit<Level, "id" | "createdAt">
   const grid = normalizeGrid(value.grid);
   const difficulty = normalizeDifficulty(value.difficulty, grid.length);
   const expectedSize = difficultySizes[difficulty];
+  const bombPreviewSeconds =
+    typeof value.bombPreviewSeconds === "number" && Number.isFinite(value.bombPreviewSeconds) && value.bombPreviewSeconds >= 1
+      ? Math.min(10, Math.floor(value.bombPreviewSeconds))
+      : 3;
 
   if (grid.length !== expectedSize) {
     throw new Error(`Level grid must be ${expectedSize}x${expectedSize}.`);
@@ -263,6 +301,7 @@ function normalizeImportedLevel(value: unknown): Omit<Level, "id" | "createdAt">
   return {
     name: name || "Imported Level",
     difficulty,
+    bombPreviewSeconds,
     width: grid[0].length,
     height: grid.length,
     grid,

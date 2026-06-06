@@ -58,5 +58,17 @@ export interface ScoreCalculationInput {
   coinsCollected: number;
   moves: number;
   timeSeconds: number;
-  baseScore?: number;
+  difficulty: "easy" | "medium" | "hard";
+  bombPreviewSeconds?: number;
+}
+
+export interface ScoreBreakdown {
+  baseScore: number;
+  coinBonus: number;
+  movePenalty: number;
+  timePenalty: number;
+  rawScore: number;
+  difficultyMultiplier: number;
+  bombPreviewMultiplier: number;
+  finalScore: number;
 }

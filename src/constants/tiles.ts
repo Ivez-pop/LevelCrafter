@@ -8,6 +8,8 @@ export const editorTiles: Tile[] = [
   "enemyVertical",
   "movingHazardHorizontal",
   "movingHazardVertical",
+  "movingFireHorizontal",
+  "movingFireVertical",
   "vent",
   "player",
   "exit",
@@ -23,6 +25,8 @@ export const tileLabels: Record<Tile, string> = {
   enemyVertical: "Enemy V",
   movingHazardHorizontal: "Hazard H",
   movingHazardVertical: "Hazard V",
+  movingFireHorizontal: "Fire H",
+  movingFireVertical: "Fire V",
   vent: "Vent",
   player: "Player",
   exit: "Exit",
@@ -37,6 +41,8 @@ export const tileStyles: Record<Tile, string> = {
   enemyVertical: "bg-[#f43f5e]",
   movingHazardHorizontal: "bg-[#f97316]",
   movingHazardVertical: "bg-[#ea580c]",
+  movingFireHorizontal: "bg-[#ffb02e]",
+  movingFireVertical: "bg-[#ff7a1a]",
   vent: "bg-[#7c3aed]",
   player: "bg-[#43ff8f]",
   exit: "bg-[#39dfff]",
@@ -51,6 +57,8 @@ export const tileIcons: Record<Tile, string> = {
   enemyVertical: "EV",
   movingHazardHorizontal: "MH",
   movingHazardVertical: "MV",
+  movingFireHorizontal: "FH",
+  movingFireVertical: "FV",
   vent: "VT",
   player: "P",
   exit: "EX",
@@ -61,6 +69,8 @@ export function isDynamicDangerTile(tile: Tile) {
     tile === "enemyHorizontal" ||
     tile === "enemyVertical" ||
     tile === "movingHazardHorizontal" ||
-    tile === "movingHazardVertical"
+    tile === "movingHazardVertical" ||
+    tile === "movingFireHorizontal" ||
+    tile === "movingFireVertical"
   );
 }

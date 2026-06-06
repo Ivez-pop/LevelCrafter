@@ -8,6 +8,10 @@ export type Direction =
   | "left"
   | "right";
 
+export type FacingDirection =
+  | "left"
+  | "right";
+
 export function getNextPosition(
   current: Position,
   direction: Direction

@@ -8,6 +8,8 @@ const editorPaletteTiles: Tile[] = [
   "exit",
   "vent",
   "hazard",
+  "movingFireHorizontal",
+  "movingFireVertical",
   "player",
   "empty",
 ];

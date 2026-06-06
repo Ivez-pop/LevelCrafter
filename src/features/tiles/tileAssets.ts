@@ -3,6 +3,7 @@ import type { Tile } from "../../types/level";
 import wall from "../../../tiles/wall.jpg";
 import coin from "../../../tiles/coin.png";
 import hazard from "../../../tiles/bomb.png";
+import fire from "../../../tiles/fire.webp";
 import blast from "../../../tiles/blast.png";
 import player from "../../../tiles/player.png";
 import exit from "../../../tiles/trophy.png";
@@ -64,6 +65,16 @@ const tileAssets: Record<Tile, TileAsset> = {
   movingHazardVertical: {
     src: hazard,
     alt: "Vertical moving hazard tile",
+    hasFloor: true,
+  },
+  movingFireHorizontal: {
+    src: fire,
+    alt: "Horizontal moving fire hazard tile",
+    hasFloor: true,
+  },
+  movingFireVertical: {
+    src: fire,
+    alt: "Vertical moving fire hazard tile",
     hasFloor: true,
   },
   vent: {

@@ -30,6 +30,18 @@ function PlayPage() {
   const controlsRef = useRef<HTMLDivElement>(null);
   const [buttonGroup, setButtonGroup] = useState<Element | null>(null);
 
+  const openLeaderboard = (level: Level) => {
+    setLeaderboardLevel(level);
+  };
+
+  const closeLeaderboard = () => {
+    setLeaderboardLevel(null);
+  };
+
+  useEffect(() => {
+    setLeaderboardLevel(null);
+  }, []);
+
   useEffect(() => {
     if (!game.level && controlsRef.current) {
       const buttons = Array.from(controlsRef.current.querySelectorAll("button"));
@@ -43,6 +55,25 @@ function PlayPage() {
   }, [game.level, game.difficulty]);
 
   useKeyboardControls(game.move);
+
+  useEffect(() => {
+    const shouldLockScroll =
+      Boolean(leaderboardLevel) ||
+      isImportOpen ||
+      game.status === "win" ||
+      game.status === "restart" ||
+      game.countdownValue !== null;
+
+    const previousOverflow = document.body.style.overflow;
+
+    if (shouldLockScroll) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [leaderboardLevel, game.countdownValue, game.status, isImportOpen]);
 
   const startImportedLevel = async (importedLevelId: string) => {
     const importedLevel = await getLevelById(importedLevelId);
@@ -140,15 +171,8 @@ function PlayPage() {
             <LevelList
               levels={game.levels}
               onPlayLevel={game.handlePlayLevel}
-              onOpenLeaderboard={setLeaderboardLevel}
+              onOpenLeaderboard={openLeaderboard}
             />
-
-            {leaderboardLevel ? (
-              <LeaderboardPlaceholder
-                level={leaderboardLevel}
-                onClose={() => setLeaderboardLevel(null)}
-              />
-            ) : null}
 
             {isImportOpen && (
               <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 sm:p-6">
@@ -219,6 +243,9 @@ function PlayPage() {
                 width={game.level.width}
                 grid={renderedGrid}
                 player={game.player}
+                playerDirection={game.playerDirection}
+                isPlayerMoving={game.isPlayerMoving}
+                showBombs={game.showBombs}
                 explosion={game.explosion}
                 getTileStyle={getTileStyle}
                 onMove={game.move}
@@ -234,24 +261,40 @@ function PlayPage() {
               timer={timer}
               collected={game.collected}
               moves={game.moves}
+              scoreBreakdown={game.scoreBreakdown}
               onPlayAgain={() => game.level && game.handlePlayLevel(game.level.id)}
               onReturnToLevelSelection={() => game.difficulty && game.loadGame(game.difficulty)}
-              onOpenLeaderboard={setLeaderboardLevel}
+              onOpenLeaderboard={openLeaderboard}
             />
 
-            {leaderboardLevel ? (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 sm:p-6">
-                <div className="w-full max-w-3xl max-h-full overflow-y-auto">
-                  <LeaderboardPlaceholder
-                    level={leaderboardLevel}
-                    onClose={() => setLeaderboardLevel(null)}
-                  />
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       )}
+
+      {leaderboardLevel ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-hidden bg-black/90 p-4 sm:p-6">
+          <div className="w-full max-w-3xl min-w-0 max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden">
+            <LeaderboardPlaceholder
+              key={leaderboardLevel.id}
+              level={leaderboardLevel}
+              onClose={closeLeaderboard}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {game.countdownValue !== null ? (
+        <div className="pointer-events-none fixed inset-0 z-[65] flex items-center justify-center bg-black/25">
+          <div className="text-center font-mono font-black uppercase text-white drop-shadow-[4px_4px_0px_#000]">
+            <div className="text-7xl sm:text-9xl">
+              {game.countdownValue}
+            </div>
+            <div className="mt-3 text-sm tracking-[0.4em] text-yellow-300 sm:text-base">
+              Memorize the bombs
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

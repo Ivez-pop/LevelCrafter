@@ -139,16 +139,18 @@ export async function recordCompletedLevel({
   timeSeconds,
 }: CompletedLevelInput) {
   const { id: userId } = await ensureAuthenticatedUserProfile();
-  const score = calculateCompletionScore({
+  const scoreBreakdown = calculateCompletionScore({
     coinsCollected,
     moves,
     timeSeconds,
+    difficulty: level.difficulty,
+    bombPreviewSeconds: level.bombPreviewSeconds,
   });
 
   return recordCompletedRun({
     userId,
     levelId: level.id,
-    score,
+    score: scoreBreakdown.finalScore,
     moves,
     timeSeconds,
     completedAt: new Date().toISOString(),
@@ -156,6 +158,8 @@ export async function recordCompletedLevel({
       coinsCollected,
       levelName: level.name,
       difficulty: level.difficulty,
+      bombPreviewSeconds: level.bombPreviewSeconds ?? 3,
+      scoreBreakdown,
     },
   });
 }

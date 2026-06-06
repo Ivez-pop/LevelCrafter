@@ -7,6 +7,8 @@ export type Tile =
   | "enemyVertical"
   | "movingHazardHorizontal"
   | "movingHazardVertical"
+  | "movingFireHorizontal"
+  | "movingFireVertical"
   | "vent"
   | "player"
   | "exit";
@@ -15,6 +17,7 @@ export interface Level {
   id: string;
   name: string;
   difficulty: "easy" | "medium" | "hard";
+  bombPreviewSeconds?: number;
   createdAt: number;
   width: number;
   height: number;

@@ -4,13 +4,15 @@ import DifficultySelector from "../shared/components/DifficultySelector";
 import GridEditor from "../features/editor/components/GridEditor";
 import TilePalette from "../features/editor/components/TilePalette";
 import type { Level, Tile } from "../types/level";
-import { encodeLevelCode, getLevelById, getLevelsByOwner, saveLevel } from "../services/levelStorage";
+import { deleteLevel, encodeLevelCode, getLevelById, getLevelsByOwner, saveLevel } from "../services/levelStorage";
 import { getAuthenticatedUser, publishCreatedLevel } from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
 
 type LevelDraft = Omit<Level, "id" | "createdAt">;
+const defaultBombPreviewSeconds = 3;
+const bombPreviewOptions = Array.from({ length: 10 }, (_, index) => index + 1);
 
 function cloneGrid(grid: Tile[][]) {
   return grid.map((row) => [...row]);
@@ -44,10 +46,17 @@ function CreateLevelPage() {
   const [selectedTile, setSelectedTile] = useState<Tile>("wall");
   const [shareCode, setShareCode] = useState("");
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
+  const [bombPreviewSeconds, setBombPreviewSeconds] = useState<number>(defaultBombPreviewSeconds);
+  const [showTimerModal, setShowTimerModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importError, setImportError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
   const [ownedLevels, setOwnedLevels] = useState<Array<{ id: string; name: string; difficulty: Difficulty; createdAt: number }>>([]);
+  const [importedSavedLevelId, setImportedSavedLevelId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingLevel, setDeletingLevel] = useState(false);
 
   const navigate = useNavigate();
 
@@ -64,6 +73,10 @@ function CreateLevelPage() {
     setFuture([]);
     setShareCode("");
     setEditingLevelId(null);
+    setBombPreviewSeconds(defaultBombPreviewSeconds);
+    setImportedSavedLevelId(null);
+    setDeleteMessage("");
+    setDeleteError("");
   };
 
   const createStarterGrid = (selectedDifficulty: Difficulty) => {
@@ -95,6 +108,10 @@ function CreateLevelPage() {
     setFuture([]);
     setShareCode("");
     setEditingLevelId(null);
+    setBombPreviewSeconds(defaultBombPreviewSeconds);
+    setImportedSavedLevelId(null);
+    setDeleteMessage("");
+    setDeleteError("");
 
     if (!levelName.trim()) {
       setLevelName(`Starter ${selectedDifficulty}`);
@@ -160,6 +177,7 @@ function CreateLevelPage() {
     return {
       name: levelName.trim(),
       difficulty,
+      bombPreviewSeconds,
       width: grid.length,
       height: grid.length,
       grid,
@@ -179,6 +197,7 @@ function CreateLevelPage() {
 
     const id = await saveLevel(draft, editingLevelId ?? undefined);
     setEditingLevelId(id);
+    setImportedSavedLevelId(null);
 
     void publishCreatedLevel({
       id,
@@ -270,11 +289,47 @@ function CreateLevelPage() {
       setHistory([]);
       setFuture([]);
       setLevelName(level.name);
+      setBombPreviewSeconds(level.bombPreviewSeconds ?? defaultBombPreviewSeconds);
       setEditingLevelId(level.id);
+      setImportedSavedLevelId(level.id);
+      setDeleteMessage("");
+      setDeleteError("");
       setShowImportModal(false);
     } catch (error) {
       console.error("[CreateLevelPage] failed to import level", error);
       setImportError(error instanceof Error ? error.message : "Failed to import the selected level.");
+    }
+  };
+
+  const handleDeleteLevel = async () => {
+    if (!importedSavedLevelId) {
+      return;
+    }
+
+    setDeletingLevel(true);
+    setDeleteError("");
+
+    try {
+      await deleteLevel(importedSavedLevelId);
+      setGrid([]);
+      setHistory([]);
+      setFuture([]);
+      setLevelName("");
+      setDifficulty(null);
+      setBombPreviewSeconds(defaultBombPreviewSeconds);
+      setSelectedTile("wall");
+      setShareCode("");
+      setEditingLevelId(null);
+      setImportedSavedLevelId(null);
+      setOwnedLevels((levels) => levels.filter((level) => level.id !== importedSavedLevelId));
+      setShowDeleteConfirm(false);
+      setShowImportModal(false);
+      setDeleteMessage("Level deleted successfully.");
+    } catch (error) {
+      console.error("[CreateLevelPage] failed to delete level", error);
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete the selected level.");
+    } finally {
+      setDeletingLevel(false);
     }
   };
 
@@ -358,6 +413,16 @@ function CreateLevelPage() {
               <button onClick={handleValidateLevel} className="arcade-button-lime">
                 Validate
               </button>
+              <button onClick={() => setShowTimerModal(true)} className="arcade-button-cyan col-span-2">
+                SET TIMER
+              </button>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="arcade-section-label">Level Settings</h3>
+            <div className="arcade-chip inline-flex bg-cyan-300 text-black">
+              Bomb Timer: {bombPreviewSeconds}s
             </div>
           </section>
 
@@ -373,6 +438,15 @@ function CreateLevelPage() {
             {grid.length > 0 && (
               <button onClick={handleSaveLevel} className="arcade-button-lime w-full">
                 Save Level
+              </button>
+            )}
+
+            {importedSavedLevelId && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="arcade-button-rose w-full"
+              >
+                Delete Level
               </button>
             )}
 
@@ -420,6 +494,12 @@ function CreateLevelPage() {
           )}
         </div>
       </div>
+
+      {deleteMessage ? (
+        <div className="fixed bottom-4 left-1/2 z-[70] -translate-x-1/2 border-4 border-black bg-lime-400 px-4 py-3 font-mono text-sm font-black uppercase text-black shadow-[6px_6px_0px_#000]">
+          {deleteMessage}
+        </div>
+      ) : null}
 
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -476,6 +556,86 @@ function CreateLevelPage() {
           </div>
         </div>
       )}
+
+      {showTimerModal ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4">
+          <div className="arcade-panel w-full max-w-3xl p-5 sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="arcade-kicker mb-2">Level Timer</p>
+                <h2 className="font-mono text-2xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">
+                  Bomb Preview Timer
+                </h2>
+              </div>
+              <button onClick={() => setShowTimerModal(false)} className="arcade-button-cyan">
+                Close
+              </button>
+            </div>
+
+            <p className="mb-5 font-mono text-sm font-bold uppercase leading-6 text-cyan-200">
+              Choose how long bombs remain visible before they become hidden.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {bombPreviewOptions.map((seconds) => {
+                const selected = bombPreviewSeconds === seconds;
+
+                return (
+                  <button
+                    key={seconds}
+                    onClick={() => {
+                      setBombPreviewSeconds(seconds);
+                    }}
+                    className={`arcade-button w-full ${selected ? "bg-yellow-300 text-black" : "bg-[#1b1b49] text-white"}`}
+                  >
+                    {seconds} Second{seconds === 1 ? "" : "s"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showDeleteConfirm && importedSavedLevelId ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4">
+          <div className="arcade-panel w-full max-w-xl p-5 sm:p-6">
+            <h2 className="arcade-section-label">Confirm Delete</h2>
+            <p className="font-mono text-2xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">
+              Delete this level permanently?
+            </p>
+            <p className="mt-3 font-mono text-sm font-bold uppercase leading-6 text-cyan-200">
+              This action cannot be undone.
+            </p>
+
+            {deleteError && (
+              <p className="mt-4 border-2 border-black bg-rose-500 px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000]">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteError("");
+                }}
+                className="arcade-button-cyan w-full"
+                disabled={deletingLevel}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteLevel}
+                className="arcade-button-rose w-full disabled:opacity-50"
+                disabled={deletingLevel}
+              >
+                {deletingLevel ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
