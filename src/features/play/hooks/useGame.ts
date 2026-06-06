@@ -8,11 +8,14 @@ import { getLevelsByDifficulty, getLevelById } from "../../../services/levelStor
 import { recordCompletedLevel } from "../../../services/gameplayService";
 import { isDynamicDangerTile } from "../../../constants/tiles";
 import { retroAudio } from "../../../audio/retroAudio";
+import type { FacingDirection } from "../../../game/movement";
+import { calculateCompletionScore } from "../../../services/scoreService";
+import type { ScoreBreakdown } from "../../../types/leaderboard";
 
 type DynamicDangerState = { dx: number; dy: number; underTile: Tile };
 
 const DYNAMIC_DANGER_TICK_MS = 450;
-
+const DEFAULT_BOMB_PREVIEW_SECONDS = 3;
 const getDynamicDangerState = (tile: Tile): DynamicDangerState => ({
   dx:
     tile === "enemyHorizontal" ||
@@ -125,12 +128,21 @@ export function useGame(): GameState & GameActions {
   const [level, setLevel] = useState<Level | null>(null);
   const [levels, setLevels] = useState<Level[]>([]);
   const [player, setPlayer] = useState<Position | null>(null);
+  const [playerDirection, setPlayerDirection] = useState<FacingDirection>("right");
+  const [isPlayerMoving, setIsPlayerMoving] = useState(false);
+  const [showBombs, setShowBombs] = useState(true);
+  const [countdownValue, setCountdownValue] = useState<string | null>(null);
+  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | null>(null);
   const [collected, setCollected] = useState(0);
   const [moves, setMoves] = useState(0);
   const movesRef = useRef(0);
   const startedAtRef = useRef<number | null>(null);
   const dynamicDirectionsRef = useRef(new Map<string, DynamicDangerState>());
   const explosionTimeoutRef = useRef<number | null>(null);
+  const movementTimeoutRef = useRef<number | null>(null);
+  const countdownTimeoutRef = useRef<number | null>(null);
+  const bombFadeTimeoutRef = useRef<number | null>(null);
+  const countdownStepRefs = useRef<number[]>([]);
   const [explosion, setExplosion] = useState<Position | null>(null);
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const [message, setMessage] = useState("");
@@ -149,7 +161,70 @@ export function useGame(): GameState & GameActions {
     setVentDestinations([]);
   }, []);
 
+  const clearMovementTimeout = useCallback(() => {
+    if (movementTimeoutRef.current !== null) {
+      window.clearTimeout(movementTimeoutRef.current);
+      movementTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearCountdownTimeout = useCallback(() => {
+    if (countdownTimeoutRef.current !== null) {
+      window.clearTimeout(countdownTimeoutRef.current);
+      countdownTimeoutRef.current = null;
+    }
+
+    if (bombFadeTimeoutRef.current !== null) {
+      window.clearTimeout(bombFadeTimeoutRef.current);
+      bombFadeTimeoutRef.current = null;
+    }
+
+    for (const timeoutId of countdownStepRefs.current) {
+      window.clearTimeout(timeoutId);
+    }
+    countdownStepRefs.current = [];
+  }, []);
+
+  const startCountdown = useCallback(
+    (previewSeconds: number) => {
+      clearCountdownTimeout();
+      setShowBombs(true);
+      const clampedSeconds = Math.max(1, Math.min(10, Math.floor(previewSeconds)));
+      setCountdownValue(String(clampedSeconds));
+
+      for (let index = 1; index < clampedSeconds; index++) {
+        const stepTimeout = window.setTimeout(() => {
+          setCountdownValue(String(clampedSeconds - index));
+        }, 1000 * index);
+
+        countdownStepRefs.current.push(stepTimeout);
+      }
+
+      countdownTimeoutRef.current = window.setTimeout(() => {
+        countdownTimeoutRef.current = null;
+        setCountdownValue("GO!");
+        bombFadeTimeoutRef.current = window.setTimeout(() => {
+          bombFadeTimeoutRef.current = null;
+          setShowBombs(false);
+          setCountdownValue(null);
+        }, 320);
+      }, 1000 * clampedSeconds);
+    },
+    [clearCountdownTimeout],
+  );
+
+  const pulseMovement = useCallback(() => {
+    clearMovementTimeout();
+    setIsPlayerMoving(true);
+    movementTimeoutRef.current = window.setTimeout(() => {
+      movementTimeoutRef.current = null;
+      setIsPlayerMoving(false);
+    }, 180);
+  }, [clearMovementTimeout]);
+
   const triggerHazardReset = useCallback((position: Position) => {
+    clearMovementTimeout();
+    setIsPlayerMoving(false);
     if (explosionTimeoutRef.current !== null) {
       window.clearTimeout(explosionTimeoutRef.current);
       explosionTimeoutRef.current = null;
@@ -166,7 +241,7 @@ export function useGame(): GameState & GameActions {
       setStatus("restart");
       setMessage("GAME OVER");
     }, 500);
-  }, []);
+  }, [clearMovementTimeout]);
 
   const enterVentSelection = useCallback(
     (entry: Position, levelToUse: Level) => {
@@ -193,10 +268,14 @@ export function useGame(): GameState & GameActions {
     setLevels(found);
     setLevel(null);
     setPlayer(null);
+    setPlayerDirection("right");
+    setIsPlayerMoving(false);
     setCollected(0);
     movesRef.current = 0;
     startedAtRef.current = null;
     dynamicDirectionsRef.current = new Map();
+    clearMovementTimeout();
+    clearCountdownTimeout();
     clearVentSelection();
     if (explosionTimeoutRef.current !== null) {
       window.clearTimeout(explosionTimeoutRef.current);
@@ -205,8 +284,11 @@ export function useGame(): GameState & GameActions {
     setExplosion(null);
     setMoves(0);
     setStatus("idle");
+    setShowBombs(true);
+    setCountdownValue(null);
+    setScoreBreakdown(null);
     setMessage(found.length ? `Found ${found.length} levels.` : "No levels available. Create one first.");
-  }, [clearVentSelection]);
+  }, [clearCountdownTimeout, clearMovementTimeout, clearVentSelection]);
 
   const resetGame = useCallback(async () => {
     if (!difficulty || !level) {
@@ -224,15 +306,23 @@ export function useGame(): GameState & GameActions {
 
     setLevel({ ...reloaded, grid: normalizeGrid(reloaded.grid) });
     setPlayer(startPosition);
+    setPlayerDirection("right");
+    setIsPlayerMoving(false);
+    setShowBombs(true);
+    setCountdownValue(null);
     setCollected(0);
     movesRef.current = 0;
     startedAtRef.current = Date.now();
     dynamicDirectionsRef.current = new Map();
+    clearMovementTimeout();
+    clearCountdownTimeout();
     setExplosion(null);
     setMoves(0);
     setStatus("continue");
     setMessage("");
-  }, [difficulty, level]);
+    setScoreBreakdown(null);
+    startCountdown(reloaded.bombPreviewSeconds ?? DEFAULT_BOMB_PREVIEW_SECONDS);
+  }, [clearCountdownTimeout, clearMovementTimeout, difficulty, level, startCountdown]);
 
   const move = useCallback((direction: Direction) => {
     console.log("[useGame] move", direction, { level: level?.id, player, status });
@@ -247,13 +337,22 @@ export function useGame(): GameState & GameActions {
       return;
     }
 
+    if (countdownValue !== null) {
+      return;
+    }
+
     const result = processMove(level, player, direction);
     console.log("[useGame] processMove result", result);
+    const nextFacing: FacingDirection =
+      direction === "left" ? "left" : direction === "right" ? "right" : playerDirection;
+    setPlayerDirection(nextFacing);
     const nextMoveCount = movesRef.current + 1;
     movesRef.current = nextMoveCount;
     setMoves(nextMoveCount);
 
     if (result.event === "blocked") {
+      clearMovementTimeout();
+      setIsPlayerMoving(false);
       setStatus("blocked");
       setMessage("Blocked by a wall.");
       retroAudio.playBlocked();
@@ -261,8 +360,10 @@ export function useGame(): GameState & GameActions {
     }
 
     const nextPosition = result.player;
+    pulseMovement();
 
     if (result.event === "restart") {
+      setShowBombs(true);
       triggerHazardReset(nextPosition);
       return;
     }
@@ -290,6 +391,14 @@ export function useGame(): GameState & GameActions {
         0,
         Math.floor((Date.now() - (startedAtRef.current ?? Date.now())) / 1000),
       );
+      const nextScoreBreakdown = calculateCompletionScore({
+        coinsCollected: collected,
+        moves: nextMoveCount,
+        timeSeconds: completionTimeSeconds,
+        difficulty: level.difficulty,
+        bombPreviewSeconds: level.bombPreviewSeconds,
+      });
+      setScoreBreakdown(nextScoreBreakdown);
 
       void recordCompletedLevel({
         level,
@@ -318,7 +427,7 @@ export function useGame(): GameState & GameActions {
     setStatus("continue");
     setMessage("");
     retroAudio.playMove();
-  }, [level, player, status, collected, triggerHazardReset, isSelectingVent, enterVentSelection]);
+  }, [clearMovementTimeout, countdownValue, enterVentSelection, level, player, playerDirection, pulseMovement, status, collected, triggerHazardReset, isSelectingVent]);
 
   const handlePlayLevel = useCallback(async (id: string) => {
     console.log("[useGame] handlePlayLevel", id);
@@ -332,6 +441,10 @@ export function useGame(): GameState & GameActions {
       const startPosition = getPlayerStart(lvl);
       setLevel({ ...lvl, grid: normalizeGrid(lvl.grid) });
       setPlayer(startPosition);
+      setPlayerDirection("right");
+      setIsPlayerMoving(false);
+      setShowBombs(true);
+      setCountdownValue(null);
       setCollected(0);
       movesRef.current = 0;
       startedAtRef.current = Date.now();
@@ -339,11 +452,15 @@ export function useGame(): GameState & GameActions {
       setMoves(0);
       setStatus("continue");
       setMessage(`Playing ${lvl.name}`);
+      setScoreBreakdown(null);
       clearVentSelection();
+      clearMovementTimeout();
+      clearCountdownTimeout();
+      startCountdown(lvl.bombPreviewSeconds ?? DEFAULT_BOMB_PREVIEW_SECONDS);
     } catch {
       setMessage("Level is invalid: missing player start.");
     }
-  }, [clearVentSelection]);
+  }, [clearCountdownTimeout, clearMovementTimeout, clearVentSelection, startCountdown]);
 
   const selectVentDestination = useCallback(
     (destination: VentDestination) => {
@@ -360,12 +477,13 @@ export function useGame(): GameState & GameActions {
       }
 
       setPlayer(destination);
+      pulseMovement();
       setStatus("continue");
       setMessage("Vent jump!");
       clearVentSelection();
       retroAudio.playMove();
     },
-    [clearVentSelection, isSelectingVent, level, ventDestinations],
+    [clearVentSelection, isSelectingVent, level, pulseMovement, ventDestinations],
   );
 
   const activeLevelId = level?.id;
@@ -436,11 +554,22 @@ export function useGame(): GameState & GameActions {
     }
   }, []);
 
-  useEffect(() => clearExplosionTimeout, [clearExplosionTimeout]);
+  useEffect(() => {
+    return () => {
+      clearExplosionTimeout();
+      clearMovementTimeout();
+      clearCountdownTimeout();
+    };
+  }, [clearCountdownTimeout, clearExplosionTimeout, clearMovementTimeout]);
 
   return {
     level,
     player,
+    playerDirection,
+    isPlayerMoving,
+    showBombs,
+    countdownValue,
+    scoreBreakdown,
     collected,
     moves,
     status,

@@ -1,4 +1,6 @@
 import type { Level, Position } from "./level";
+import type { FacingDirection } from "../game/movement";
+import type { ScoreBreakdown } from "./leaderboard";
 
 export type GameStatus = "idle" | "blocked" | "continue" | "collect" | "restart" | "win";
 
@@ -12,6 +14,11 @@ export interface VentDestination {
 export interface GameState {
   level: Level | null;
   player: Position | null;
+  playerDirection: FacingDirection;
+  isPlayerMoving: boolean;
+  showBombs: boolean;
+  countdownValue: string | null;
+  scoreBreakdown: ScoreBreakdown | null;
   explosion: Position | null;
   collected: number;
   moves: number;

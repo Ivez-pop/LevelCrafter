@@ -17,6 +17,7 @@ export interface Level {
   id: string;
   name: string;
   difficulty: "easy" | "medium" | "hard";
+  bombPreviewSeconds?: number;
   createdAt: number;
   width: number;
   height: number;

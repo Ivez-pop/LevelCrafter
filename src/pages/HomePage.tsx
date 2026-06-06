@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import LogoutButton from "../components/LogoutButton";
@@ -16,12 +16,21 @@ const tutorialBoard: Tile[][] = [
   ["wall", "wall", "wall", "wall", "wall", "wall"],
 ];
 
-const tileGuide: Array<{ tile: Tile; name: string; note: string }> = [
+const tileGuide: Array<{ tile: Tile; name: string; note: ReactNode }> = [
   { tile: "player", name: "Player", note: "Start here and reach the trophy." },
   { tile: "exit", name: "Exit", note: "Touch it to finish the level." },
   { tile: "coin", name: "Coin", note: "Collect these while solving the route." },
   { tile: "wall", name: "Wall", note: "Blocks players and moving hazards." },
-  { tile: "hazard", name: "Bomb", note: "Touching danger restarts the run." },
+  {
+    tile: "hazard",
+    name: "Bombs",
+    note: (
+      <div className="space-y-2">
+        <p>Bombs are only visible briefly at the start of a level - memorize their locations before they disappear.</p>
+        <p className="font-black text-rose-400">⚠ Hidden bombs remain active and will instantly end your run if stepped on.</p>
+      </div>
+    ),
+  },
   { tile: "vent", name: "Vent", note: "Jump between linked vents." },
   { tile: "movingFireHorizontal", name: "Fire H", note: "Sweeps left and right until blocked." },
   { tile: "movingFireVertical", name: "Fire V", note: "Sweeps up and down until blocked." },
@@ -30,7 +39,7 @@ const tileGuide: Array<{ tile: Tile; name: string; note: string }> = [
 const playSteps = [
   "Pick a difficulty, choose a saved level, then guide the player across the grid.",
   "Move one tile at a time. Walls block movement, while coins, vents, and exits can be entered.",
-  "Avoid bombs, enemies, and moving fire. If a hazard touches you, the run ends.",
+  "Avoid hidden bombs, enemies, and moving fire. If a hazard touches you, the run ends.",
   "Reach the trophy exit to win. Fewer moves and faster clears make better scores.",
 ];
 
@@ -290,9 +299,9 @@ function HomePage() {
                       <h3 className="font-mono text-sm font-black uppercase text-yellow-200">
                         {item.name}
                       </h3>
-                      <p className="mt-1 text-xs font-semibold leading-5 text-cyan-100">
+                      <div className="mt-1 text-xs font-semibold leading-5 text-cyan-100">
                         {item.note}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 ))}

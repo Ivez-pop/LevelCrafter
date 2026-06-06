@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import type { Tile, Position } from "../../../types/level";
 import type { Direction } from "../../../game/movement";
 import type { VentDestination } from "../../../types/gameState";
+import type { FacingDirection } from "../../../game/movement";
 import { TileArtwork } from "../../tiles/TileArtwork";
 import { blastTile } from "../../tiles/tileAssets";
 
@@ -9,6 +10,9 @@ interface GameBoardProps {
   width: number;
   grid: Tile[][];
   player: Position | null;
+  playerDirection: FacingDirection;
+  isPlayerMoving: boolean;
+  showBombs: boolean;
   explosion: Position | null;
   getTileStyle: (tile: Tile) => string;
   onMove: (direction: Direction) => void;
@@ -21,6 +25,9 @@ export function GameBoard({
   width,
   grid,
   player,
+  playerDirection,
+  isPlayerMoving,
+  showBombs,
   explosion,
   getTileStyle,
   onMove,
@@ -95,6 +102,10 @@ export function GameBoard({
 
     if (!cell || !player || cell.row !== player.y || cell.col !== player.x) {
       return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
     dragState.current = {
@@ -174,7 +185,7 @@ export function GameBoard({
   );
 
   return (
-    <div className="border-4 border-black bg-black p-2 shadow-[8px_8px_0px_#000] sm:p-3">
+    <div className="select-none touch-none border-4 border-black bg-black p-2 shadow-[8px_8px_0px_#000] sm:p-3">
       <div
         className="grid gap-0 bg-black"
         style={{
@@ -215,7 +226,14 @@ export function GameBoard({
                 `
               }
             >
-              <TileArtwork tile={cell} className="h-full w-full" imageClassName="p-0.5" />
+              <TileArtwork
+                tile={cell}
+                className="h-full w-full"
+                imageClassName="p-0.5"
+                playerDirection={playerDirection}
+                isPlayerMoving={isPlayerMoving}
+                showBombs={showBombs}
+              />
               {isSelectingVent && cell === "vent" && destinationByKey.has(`${colIndex},${rowIndex}`) ? (
                 <div className="absolute inset-0 z-10 bg-cyan-300/15" />
               ) : null}
