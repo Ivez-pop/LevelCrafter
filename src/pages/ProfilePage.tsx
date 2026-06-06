@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabaseClient } from "../lib/supabase";
-import { getProfileDashboard, updateUsername } from "../services/profileService";
+import { getProfileDashboard, updatePlayerAvatar, updateUsername } from "../services/profileService";
 import type { ProfileDashboardData } from "../services/profileService";
+import { PlayerAvatar } from "../features/playerAvatar/PlayerAvatar";
+import {
+  getPlayerAvatarOption,
+  playerAvatarOptions,
+  type PlayerAvatarId,
+} from "../features/playerAvatar/avatarOptions";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -25,8 +31,10 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileDashboardData | null>(null);
   const [username, setUsername] = useState("");
+  const [selectedAvatarId, setSelectedAvatarId] = useState<PlayerAvatarId>("crimson-crewmate");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [error, setError] = useState("");
   const supabase = getSupabaseClient();
 
@@ -38,6 +46,7 @@ function ProfilePage() {
       const data = await getProfileDashboard();
       setProfile(data);
       setUsername(data.username);
+      setSelectedAvatarId(data.playerAvatarId);
     } catch (caughtError) {
       const message =
         caughtError instanceof Error ? caughtError.message : "Failed to load profile.";
@@ -45,6 +54,23 @@ function ProfilePage() {
       setError(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAvatarSave = async () => {
+    setIsSavingAvatar(true);
+    setError("");
+
+    try {
+      await updatePlayerAvatar(selectedAvatarId);
+      await loadProfile();
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error ? caughtError.message : "Failed to update character.";
+
+      setError(message);
+    } finally {
+      setIsSavingAvatar(false);
     }
   };
 
@@ -133,21 +159,34 @@ function ProfilePage() {
               <div className="arcade-panel p-6">
                 <h2 className="arcade-section-label">User Identity</h2>
 
-                <div className="mt-4 space-y-3">
-                  <div className="arcade-chip bg-cyan-300 text-black">
-                    Username: {profile.username}
+                <div className="mt-4 grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
+                  <div className="arcade-panel-deep mx-auto h-28 w-28 p-2">
+                    <PlayerAvatar
+                      avatarId={profile.playerAvatarId}
+                      className="drop-shadow-[4px_4px_0px_#000]"
+                    />
                   </div>
 
-                  <div className="arcade-chip bg-yellow-300 text-black">
-                    Email: {profile.email}
-                  </div>
+                  <div className="space-y-3">
+                    <div className="arcade-chip bg-cyan-300 text-black">
+                      Username: {profile.username}
+                    </div>
 
-                  <div className="arcade-chip bg-violet-300 text-black">
-                    Join Date: {formatDate(profile.joinDate)}
-                  </div>
+                    <div className="arcade-chip bg-yellow-300 text-black">
+                      Character: {getPlayerAvatarOption(profile.playerAvatarId).name}
+                    </div>
 
-                  <div className="arcade-chip bg-lime-300 text-black">
-                    Global Rank: {profile.globalRank ?? "Unranked"}
+                    <div className="arcade-chip bg-orange-300 text-black">
+                      Email: {profile.email}
+                    </div>
+
+                    <div className="arcade-chip bg-violet-300 text-black">
+                      Join Date: {formatDate(profile.joinDate)}
+                    </div>
+
+                    <div className="arcade-chip bg-lime-300 text-black">
+                      Global Rank: {profile.globalRank ?? "Unranked"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -169,6 +208,53 @@ function ProfilePage() {
                     className="arcade-button-lime w-full disabled:opacity-60"
                   >
                     {isSaving ? "Saving..." : "Save Username"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="arcade-panel p-6">
+                <h2 className="arcade-section-label">Edit Character</h2>
+
+                <div className="mt-4 grid gap-5">
+                  <div className="arcade-panel-deep mx-auto h-36 w-36 p-3">
+                    <PlayerAvatar
+                      avatarId={selectedAvatarId}
+                      className="drop-shadow-[5px_5px_0px_#000]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {playerAvatarOptions.map((avatar) => {
+                      const isSelected = selectedAvatarId === avatar.id;
+
+                      return (
+                        <button
+                          key={avatar.id}
+                          onClick={() => setSelectedAvatarId(avatar.id)}
+                          className={`border-4 border-black p-2 text-left shadow-[4px_4px_0px_#000] transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000] ${
+                            isSelected
+                              ? "bg-yellow-300 text-black"
+                              : "bg-[#12122f] text-cyan-100 hover:bg-[#1b1b49]"
+                          }`}
+                        >
+                          <div className="mx-auto h-16 w-16">
+                            <PlayerAvatar avatarId={avatar.id} />
+                          </div>
+
+                          <div className="mt-2 text-center font-mono text-[10px] font-black uppercase leading-4">
+                            {avatar.name}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={handleAvatarSave}
+                    disabled={isSavingAvatar || selectedAvatarId === profile.playerAvatarId}
+                    className="arcade-button-orange w-full disabled:opacity-60"
+                  >
+                    {isSavingAvatar ? "Saving..." : "Save Character"}
                   </button>
                 </div>
               </div>

@@ -34,9 +34,9 @@ export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) 
   </main>
   <script>
     const level = ${embeddedLevel};
-    const dynamicTiles = new Set(["enemyHorizontal","enemyVertical","movingHazardHorizontal","movingHazardVertical"]);
-    const styles = {empty:"#e9f7ff",wall:"#4b5563",coin:"#ffd83d",hazard:"#ff3d57",enemyHorizontal:"#fb7185",enemyVertical:"#f43f5e",movingHazardHorizontal:"#f97316",movingHazardVertical:"#ea580c",vent:"#7c3aed",player:"#43ff8f",exit:"#39dfff"};
-    const icons = {empty:"",wall:"W",coin:"$",hazard:"!",enemyHorizontal:"EH",enemyVertical:"EV",movingHazardHorizontal:"MH",movingHazardVertical:"MV",vent:"VT",player:"P",exit:"EX"};
+    const dynamicTiles = new Set(["enemyHorizontal","enemyVertical","movingHazardHorizontal","movingHazardVertical","movingFireHorizontal","movingFireVertical"]);
+    const styles = {empty:"#e9f7ff",wall:"#4b5563",coin:"#ffd83d",hazard:"#ff3d57",enemyHorizontal:"#fb7185",enemyVertical:"#f43f5e",movingHazardHorizontal:"#f97316",movingHazardVertical:"#ea580c",movingFireHorizontal:"#ffb02e",movingFireVertical:"#ff7a1a",vent:"#7c3aed",player:"#43ff8f",exit:"#39dfff"};
+    const icons = {empty:"",wall:"W",coin:"$",hazard:"!",enemyHorizontal:"EH",enemyVertical:"EV",movingHazardHorizontal:"MH",movingHazardVertical:"MV",movingFireHorizontal:"FH",movingFireVertical:"FV",vent:"VT",player:"P",exit:"EX"};
     let baseGrid, player, movers, moves, coins, won;
     function reset(){
       moves = 0; coins = 0; won = false; movers = [];
@@ -72,9 +72,13 @@ export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) 
       player=tile==="vent" ? ventDestination(nx,ny) : {x:nx,y:ny};
       if(tile==="coin"){ coins++; baseGrid[ny][nx]="empty"; }
       if(tile==="exit"){ won=true; render("You win"); return; }
+      render(tile==="coin" ? "Coin" : tile==="vent" ? "Vent" : "Go");
+    }
+    function tickMovers(){
+      if(won) return;
       movers.forEach(moveMover);
       if(dangerAt(player.x,player.y)){ reset(); render("Restart"); return; }
-      render(tile==="coin" ? "Coin" : tile==="vent" ? "Vent" : "Go");
+      render(document.getElementById("status").textContent || "Go");
     }
     function render(status){
       document.getElementById("moves").textContent = "Moves: " + moves;
@@ -100,6 +104,7 @@ export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) 
     });
     document.getElementById("restart").addEventListener("click", reset);
     reset();
+    setInterval(tickMovers, 450);
   </script>
 </body>
 </html>`;

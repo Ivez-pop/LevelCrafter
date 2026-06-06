@@ -3,6 +3,8 @@ import { getSupabaseClient } from "../lib/supabase";
 import type { Level } from "../types/level";
 import type { Json } from "../types/supabase";
 import { getGlobalRankings } from "./rankingService";
+import { defaultPlayerAvatarId, type PlayerAvatarId } from "../features/playerAvatar/avatarOptions";
+import { writeStoredPlayerAvatar } from "../features/playerAvatar/avatarStorage";
 
 interface PublicUserRow {
   id: string;
@@ -40,6 +42,7 @@ export interface ProfileDashboardData {
   displayName: string;
   joinDate: string;
   globalRank: number | null;
+  playerAvatarId: PlayerAvatarId;
   createdMaps: CreatedMapRow[];
   playHistory: PlayHistoryRow[];
 }
@@ -180,6 +183,36 @@ export async function updateUsername(newUsername: string) {
   }
 }
 
+export async function updatePlayerAvatar(avatarId: PlayerAvatarId) {
+  const supabase = getSupabaseClient();
+  const user = await getAuthenticatedUser();
+
+  const { error: authError } = await supabase.auth.updateUser({
+    data: {
+      player_avatar: avatarId,
+    },
+  });
+
+  if (authError) {
+    throw authError;
+  }
+
+  const result = await supabase
+    .from("users")
+    .update({
+      avatar_url: avatarId,
+    })
+    .eq("id", user.id);
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  writeStoredPlayerAvatar(user.id, avatarId);
+
+  return ensurePublicUserProfile(user);
+}
+
 export async function publishCreatedLevel(level: Level) {
   const supabase = getSupabaseClient();
   const user = await getAuthenticatedUser().catch(() => null);
@@ -246,6 +279,10 @@ export async function getProfileDashboard(): Promise<ProfileDashboardData> {
   }
 
   const globalRank = rankings.find((entry) => entry.userId === user.id)?.rank ?? null;
+  const metadataAvatar = readMetadataString(user, "player_avatar");
+  const playerAvatarId = (profile.avatar_url ?? metadataAvatar ?? defaultPlayerAvatarId) as PlayerAvatarId;
+
+  writeStoredPlayerAvatar(user.id, playerAvatarId);
 
   return {
     userId: user.id,
@@ -254,6 +291,7 @@ export async function getProfileDashboard(): Promise<ProfileDashboardData> {
     displayName: profile.display_name ?? profile.username ?? resolveAuthenticatedUsername(user),
     joinDate: user.created_at ?? profile.created_at,
     globalRank,
+    playerAvatarId,
     createdMaps: createdMaps ?? [],
     playHistory: playHistory ?? [],
   };
