@@ -7,6 +7,8 @@ export type Tile =
   | "enemyVertical"
   | "movingHazardHorizontal"
   | "movingHazardVertical"
+  | "movingFireHorizontal"
+  | "movingFireVertical"
   | "vent"
   | "player"
   | "exit";

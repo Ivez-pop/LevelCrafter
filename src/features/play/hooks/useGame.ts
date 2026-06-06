@@ -9,26 +9,39 @@ import { recordCompletedLevel } from "../../../services/gameplayService";
 import { isDynamicDangerTile } from "../../../constants/tiles";
 import { retroAudio } from "../../../audio/retroAudio";
 
-type DynamicDirection = { dx: number; dy: number };
+type DynamicDangerState = { dx: number; dy: number; underTile: Tile };
 
-const getDynamicDirection = (tile: Tile): DynamicDirection => ({
+const DYNAMIC_DANGER_TICK_MS = 450;
+
+const getDynamicDangerState = (tile: Tile): DynamicDangerState => ({
   dx:
-    tile === "enemyHorizontal" || tile === "movingHazardHorizontal" ? 1 : 0,
+    tile === "enemyHorizontal" ||
+    tile === "movingHazardHorizontal" ||
+    tile === "movingFireHorizontal"
+      ? 1
+      : 0,
   dy:
-    tile === "enemyVertical" || tile === "movingHazardVertical" ? 1 : 0,
+    tile === "enemyVertical" ||
+    tile === "movingHazardVertical" ||
+    tile === "movingFireVertical"
+      ? 1
+      : 0,
+  underTile: "empty",
 });
 
 function advanceDynamicDangers(
   grid: Tile[][],
   player: Position,
-  directions: Map<string, DynamicDirection>,
+  directions: Map<string, DynamicDangerState>,
 ) {
   const nextGrid = grid.map((row) => [...row]);
+  const dangerOrdinals = new Map<string, number>();
   const dangers: Array<{
+    key: string;
     x: number;
     y: number;
     tile: Tile;
-    direction: DynamicDirection;
+    state: DynamicDangerState;
   }> = [];
 
   for (let y = 0; y < nextGrid.length; y++) {
@@ -36,13 +49,21 @@ function advanceDynamicDangers(
       const tile = nextGrid[y][x];
 
       if (isDynamicDangerTile(tile)) {
+        const axisKey = `${tile}:${tile.endsWith("Horizontal") ? y : x}`;
+        const ordinal = dangerOrdinals.get(axisKey) ?? 0;
+        const key = `${axisKey}:${ordinal}`;
+        const state = directions.get(key) ?? getDynamicDangerState(tile);
+
+        dangerOrdinals.set(axisKey, ordinal + 1);
+
         dangers.push({
+          key,
           x,
           y,
           tile,
-          direction: directions.get(`${x},${y}`) ?? getDynamicDirection(tile),
+          state,
         });
-        nextGrid[y][x] = "empty";
+        nextGrid[y][x] = state.underTile;
       }
     }
   }
@@ -52,23 +73,28 @@ function advanceDynamicDangers(
     y >= nextGrid.length ||
     x < 0 ||
     x >= nextGrid[y].length ||
-    nextGrid[y][x] !== "empty" ||
+    nextGrid[y][x] === "wall" ||
     dangers.some((danger) => danger.x === x && danger.y === y);
 
   for (const danger of dangers) {
-    let nextX = danger.x + danger.direction.dx;
-    let nextY = danger.y + danger.direction.dy;
+    let nextX = danger.x + danger.state.dx;
+    let nextY = danger.y + danger.state.dy;
 
     if (isBlocked(nextX, nextY)) {
-      danger.direction = {
-        dx: -danger.direction.dx,
-        dy: -danger.direction.dy,
+      danger.state = {
+        ...danger.state,
+        dx: -danger.state.dx,
+        dy: -danger.state.dy,
       };
-      nextX = danger.x + danger.direction.dx;
-      nextY = danger.y + danger.direction.dy;
+      nextX = danger.x + danger.state.dx;
+      nextY = danger.y + danger.state.dy;
     }
 
     if (!isBlocked(nextX, nextY)) {
+      danger.state = {
+        ...danger.state,
+        underTile: nextGrid[nextY][nextX],
+      };
       danger.x = nextX;
       danger.y = nextY;
     }
@@ -78,15 +104,16 @@ function advanceDynamicDangers(
     nextGrid[danger.y][danger.x] = danger.tile;
   }
 
-  const nextDirections = new Map<string, DynamicDirection>();
+  const nextDirections = new Map<string, DynamicDangerState>();
 
   for (const danger of dangers) {
-    nextDirections.set(`${danger.x},${danger.y}`, danger.direction);
+    nextDirections.set(danger.key, danger.state);
   }
 
   return {
     grid: nextGrid,
     directions: nextDirections,
+    hasDangers: dangers.length > 0,
     hitPlayer: dangers.some(
       (danger) => danger.x === player.x && danger.y === player.y,
     ),
@@ -102,7 +129,7 @@ export function useGame(): GameState & GameActions {
   const [moves, setMoves] = useState(0);
   const movesRef = useRef(0);
   const startedAtRef = useRef<number | null>(null);
-  const dynamicDirectionsRef = useRef(new Map<string, DynamicDirection>());
+  const dynamicDirectionsRef = useRef(new Map<string, DynamicDangerState>());
   const explosionTimeoutRef = useRef<number | null>(null);
   const [explosion, setExplosion] = useState<Position | null>(null);
   const [status, setStatus] = useState<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
@@ -129,6 +156,7 @@ export function useGame(): GameState & GameActions {
     }
 
     setExplosion(position);
+    setStatus("restart");
     setMessage("Boom!");
     retroAudio.playDeath();
 
@@ -155,7 +183,7 @@ export function useGame(): GameState & GameActions {
       setStatus("continue");
       setMessage("Click a vent destination.");
     },
-    [clearVentSelection, triggerHazardReset],
+    [clearVentSelection],
   );
 
   const loadGame = useCallback(async (selectedDifficulty: Difficulty) => {
@@ -247,19 +275,8 @@ export function useGame(): GameState & GameActions {
             : tile,
         ),
       );
-      const advanced = advanceDynamicDangers(
-        updatedGrid,
-        nextPosition,
-        dynamicDirectionsRef.current,
-      );
 
-      if (advanced.hitPlayer) {
-        triggerHazardReset(nextPosition);
-        return;
-      }
-
-      dynamicDirectionsRef.current = advanced.directions;
-      setLevel({ ...level, grid: advanced.grid });
+      setLevel({ ...level, grid: updatedGrid });
       setCollected((count) => count + 1);
       setPlayer(nextPosition);
       setStatus("collect");
@@ -297,19 +314,6 @@ export function useGame(): GameState & GameActions {
       return;
     }
 
-    const advanced = advanceDynamicDangers(
-      level.grid,
-      nextPosition,
-      dynamicDirectionsRef.current,
-    );
-
-    if (advanced.hitPlayer) {
-      triggerHazardReset(nextPosition);
-      return;
-    }
-
-    dynamicDirectionsRef.current = advanced.directions;
-    setLevel({ ...level, grid: advanced.grid });
     setPlayer(nextPosition);
     setStatus("continue");
     setMessage("");
@@ -355,28 +359,53 @@ export function useGame(): GameState & GameActions {
         return;
       }
 
-      const advanced = advanceDynamicDangers(
-        level.grid,
-        destination,
-        dynamicDirectionsRef.current,
-      );
-
-      if (advanced.hitPlayer) {
-        triggerHazardReset(destination);
-        clearVentSelection();
-        return;
-      }
-
-      dynamicDirectionsRef.current = advanced.directions;
-      setLevel({ ...level, grid: advanced.grid });
       setPlayer(destination);
       setStatus("continue");
       setMessage("Vent jump!");
       clearVentSelection();
       retroAudio.playMove();
     },
-    [clearVentSelection, isSelectingVent, level, triggerHazardReset, ventDestinations],
+    [clearVentSelection, isSelectingVent, level, ventDestinations],
   );
+
+  const activeLevelId = level?.id;
+
+  useEffect(() => {
+    if (!activeLevelId || !player || status === "idle" || status === "restart" || status === "win") {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setLevel((currentLevel) => {
+        if (!currentLevel) {
+          return currentLevel;
+        }
+
+        const advanced = advanceDynamicDangers(
+          currentLevel.grid,
+          player,
+          dynamicDirectionsRef.current,
+        );
+
+        if (!advanced.hasDangers) {
+          return currentLevel;
+        }
+
+        dynamicDirectionsRef.current = advanced.directions;
+
+        if (advanced.hitPlayer) {
+          clearVentSelection();
+          triggerHazardReset(player);
+        }
+
+        return { ...currentLevel, grid: advanced.grid };
+      });
+    }, DYNAMIC_DANGER_TICK_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeLevelId, clearVentSelection, player, status, triggerHazardReset]);
 
   useEffect(() => {
     if (!isSelectingVent) {
