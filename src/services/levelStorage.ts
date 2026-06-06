@@ -42,6 +42,13 @@ function mapLevelRow(row: LevelRow): Level {
   };
 }
 
+export interface LevelListItem {
+  id: string;
+  name: string;
+  difficulty: Difficulty;
+  createdAt: number;
+}
+
 function genId() {
   return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(
     36,
@@ -120,6 +127,42 @@ export async function getLevelById(id: string): Promise<Level | null> {
   }
 
   return data ? mapLevelRow(data as LevelRow) : null;
+}
+
+export async function getLevelsByOwner(userId: string): Promise<LevelListItem[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("levels")
+    .select("id, owner_id, name, difficulty, width, height, metadata, created_at, updated_at")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const levels: LevelListItem[] = [];
+
+  for (const row of data ?? []) {
+    try {
+      const difficulty = row.difficulty as Difficulty;
+
+      if (difficulty !== "easy" && difficulty !== "medium" && difficulty !== "hard") {
+        throw new Error("Level difficulty is missing or invalid.");
+      }
+
+      levels.push({
+        id: row.id,
+        name: row.name,
+        difficulty,
+        createdAt: Date.parse(row.created_at),
+      });
+    } catch (error) {
+      console.warn("Skipping invalid owned level row:", row.id, row.name, error);
+    }
+  }
+
+  return levels;
 }
 
 export async function importLevel(level: Omit<Level, "id" | "createdAt">): Promise<string> {

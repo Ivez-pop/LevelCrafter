@@ -4,8 +4,8 @@ import DifficultySelector from "../shared/components/DifficultySelector";
 import GridEditor from "../features/editor/components/GridEditor";
 import TilePalette from "../features/editor/components/TilePalette";
 import type { Level, Tile } from "../types/level";
-import { encodeLevelCode, saveLevel } from "../services/levelStorage";
-import { publishCreatedLevel } from "../services/profileService";
+import { encodeLevelCode, getLevelById, getLevelsByOwner, saveLevel } from "../services/levelStorage";
+import { getAuthenticatedUser, publishCreatedLevel } from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
@@ -43,6 +43,11 @@ function CreateLevelPage() {
   const [saveError, setSaveError] = useState("");
   const [selectedTile, setSelectedTile] = useState<Tile>("wall");
   const [shareCode, setShareCode] = useState("");
+  const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const [ownedLevels, setOwnedLevels] = useState<Array<{ id: string; name: string; difficulty: Difficulty; createdAt: number }>>([]);
 
   const navigate = useNavigate();
 
@@ -58,6 +63,7 @@ function CreateLevelPage() {
     setHistory([]);
     setFuture([]);
     setShareCode("");
+    setEditingLevelId(null);
   };
 
   const createStarterGrid = (selectedDifficulty: Difficulty) => {
@@ -88,6 +94,7 @@ function CreateLevelPage() {
     setHistory([]);
     setFuture([]);
     setShareCode("");
+    setEditingLevelId(null);
 
     if (!levelName.trim()) {
       setLevelName(`Starter ${selectedDifficulty}`);
@@ -170,7 +177,8 @@ function CreateLevelPage() {
 
     if (!draft) return;
 
-    const id = await saveLevel(draft);
+    const id = await saveLevel(draft, editingLevelId ?? undefined);
+    setEditingLevelId(id);
 
     void publishCreatedLevel({
       id,
@@ -221,6 +229,53 @@ function CreateLevelPage() {
       buildStandaloneGameHtml(draft),
       "text/html",
     );
+  };
+
+  const openImportModal = async () => {
+    setImportError("");
+    setShowImportModal(true);
+    setImportLoading(true);
+
+    try {
+      const user = await getAuthenticatedUser();
+      const levels = await getLevelsByOwner(user.id);
+      setOwnedLevels(levels);
+    } catch (error) {
+      console.error("[CreateLevelPage] failed to load owned levels", error);
+      setImportError(error instanceof Error ? error.message : "Failed to load your saved levels.");
+      setOwnedLevels([]);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const importLevelIntoEditor = async (levelId: string) => {
+    setImportError("");
+
+    try {
+      const ownedLevel = ownedLevels.find((item) => item.id === levelId);
+
+      if (!ownedLevel) {
+        throw new Error("That level is not available in your saved maps.");
+      }
+
+      const level = await getLevelById(levelId);
+
+      if (!level) {
+        throw new Error("That level no longer exists.");
+      }
+
+      setDifficulty(level.difficulty);
+      setGrid(level.grid.map((row) => [...row]));
+      setHistory([]);
+      setFuture([]);
+      setLevelName(level.name);
+      setEditingLevelId(level.id);
+      setShowImportModal(false);
+    } catch (error) {
+      console.error("[CreateLevelPage] failed to import level", error);
+      setImportError(error instanceof Error ? error.message : "Failed to import the selected level.");
+    }
   };
 
   return (
@@ -315,8 +370,14 @@ function CreateLevelPage() {
           )}
 
           <div className="mt-auto grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <button onClick={handleSaveLevel} className="arcade-button-lime w-full">
-              Save Level
+            {grid.length > 0 && (
+              <button onClick={handleSaveLevel} className="arcade-button-lime w-full">
+                Save Level
+              </button>
+            )}
+
+            <button onClick={openImportModal} className="arcade-button-orange w-full">
+              Import Saved Level
             </button>
 
             <button onClick={handleExportJson} className="arcade-button-violet w-full">
@@ -334,10 +395,7 @@ function CreateLevelPage() {
               Export Game
             </button>
 
-            <button
-              onClick={() => navigate("/play")}
-              className="arcade-button-orange w-full"
-            >
+            <button onClick={() => navigate("/play")} className="arcade-button-orange w-full">
               Playtest
             </button>
           </div>
@@ -362,6 +420,62 @@ function CreateLevelPage() {
           )}
         </div>
       </div>
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="arcade-panel w-full max-w-3xl p-4 sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="arcade-kicker mb-2">Load Saved Map</p>
+                <h2 className="font-mono text-2xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">
+                  Import Saved Level
+                </h2>
+              </div>
+              <button onClick={() => setShowImportModal(false)} className="arcade-button-cyan">
+                Close
+              </button>
+            </div>
+
+            {importError && (
+              <p className="mb-4 border-2 border-black bg-rose-500 px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000]">
+                {importError}
+              </p>
+            )}
+
+            {importLoading ? (
+              <div className="arcade-panel-deep p-6 text-center font-mono text-sm font-black uppercase text-cyan-200">
+                Loading your saved levels...
+              </div>
+            ) : ownedLevels.length === 0 ? (
+              <div className="arcade-panel-deep p-6 text-center font-mono text-sm font-black uppercase text-cyan-200">
+                You haven't created any levels yet.
+              </div>
+            ) : (
+              <div className="max-h-[60vh] overflow-auto">
+                <div className="grid gap-3">
+                  {ownedLevels.map((level) => (
+                    <button
+                      key={level.id}
+                      onClick={() => importLevelIntoEditor(level.id)}
+                      className="arcade-panel-deep flex items-center justify-between gap-4 p-4 text-left transition-transform hover:-translate-y-0.5"
+                    >
+                      <div>
+                        <div className="font-mono text-lg font-black uppercase text-yellow-300">
+                          {level.name}
+                        </div>
+                        <div className="font-mono text-xs font-bold uppercase text-cyan-200">
+                          {level.difficulty} • {new Date(level.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="arcade-chip bg-lime-300 text-black">Import</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
