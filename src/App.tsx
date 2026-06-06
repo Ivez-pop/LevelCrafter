@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import CreateLevelPage from "./pages/CreateLevelPage";
 import PlayPage from "./pages/PlayPage";
@@ -10,11 +10,19 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeSelector } from "./shared/components/ThemeSelector";
 import { RetroAudioController } from "./components/RetroAudioController";
 
+function ConditionalThemeSelector() {
+  const location = useLocation();
+  if (location.pathname !== "/") {
+    return null;
+  }
+  return <ThemeSelector />;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <RetroAudioController />
-      <ThemeSelector />
+      <ConditionalThemeSelector />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/create" element={<CreateLevelPage />} />

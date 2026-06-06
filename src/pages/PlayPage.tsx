@@ -95,8 +95,10 @@ function PlayPage() {
 
   return (
     <div className="arcade-screen">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <h1 className="arcade-title !mb-0">PLAY LEVELS</h1>
+      <div className="relative mb-6 flex items-start justify-end">
+  <h1 className="arcade-title absolute left-1/2 -translate-x-1/2 !mb-0">
+    PLAY LEVELS
+  </h1>
         <div className="flex flex-wrap gap-3">
           <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
           <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
