@@ -9,6 +9,7 @@ import { getAuthenticatedUser, publishCreatedLevel } from "../services/profileSe
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
+import { generateMaze } from "../features/mazeGenerator/mazeGenerator";
 
 type LevelDraft = Omit<Level, "id" | "createdAt">;
 const defaultBombPreviewSeconds = 3;
@@ -120,6 +121,31 @@ function CreateLevelPage() {
 
   const handleGenerateStarter = () => {
     createStarterGrid(difficulty ?? "easy");
+  };
+
+  const handleGenerateMaze = () => {
+    if (!difficulty) {
+      setSaveError("Please select a difficulty.");
+      return;
+    }
+
+    const size = difficultySizes[difficulty];
+    const nextGrid = generateMaze({ width: size, height: size, algorithm: "dfs" });
+
+    setDifficulty(difficulty);
+    setGrid(nextGrid);
+    setHistory([]);
+    setFuture([]);
+    setShareCode("");
+    setEditingLevelId(null);
+    setBombPreviewSeconds(defaultBombPreviewSeconds);
+    setImportedSavedLevelId(null);
+    setDeleteMessage("");
+    setDeleteError("");
+
+    if (!levelName.trim()) {
+      setLevelName(`Maze ${difficulty}`);
+    }
   };
 
   const handleTileSelect = (tile: Tile) => {
@@ -449,6 +475,10 @@ function CreateLevelPage() {
                 Delete Level
               </button>
             )}
+
+            <button onClick={handleGenerateMaze} className="arcade-button-yellow w-full">
+              GENERATE MAZE
+            </button>
 
             <button onClick={openImportModal} className="arcade-button-orange w-full">
               Import Saved Level

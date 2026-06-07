@@ -1,6 +1,6 @@
 export const difficultySizes = {
-  easy: 5,
-  medium: 8,
+  easy: 6,
+  medium: 9,
   hard: 12,
 } as const;
 
