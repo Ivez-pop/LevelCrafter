@@ -312,13 +312,13 @@ function HomePage() {
                 </h3>
 
                 <ul className="space-y-2 font-mono text-xs font-bold uppercase leading-6 text-cyan-100">
-                  <li>⚡ Memorize bomb locations before they disappear.</li>
-                  <li>🌀 Use vents to create shortcuts across the map.</li>
+                  <li>- Memorize bomb locations before they disappear.</li>
+                  <li>- Use vents to create shortcuts across the map.</li>
                   <li>
-                    🔥 Watch moving fire patterns before making risky moves.
+                    - Watch moving fire patterns before making risky moves.
                   </li>
                   <li>
-                    🪙 Collect coins when safe, but reaching the exit is the
+                    - Collect coins when safe, but reaching the exit is the
                     priority.
                   </li>
                 </ul>
