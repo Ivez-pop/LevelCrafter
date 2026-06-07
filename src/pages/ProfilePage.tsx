@@ -253,6 +253,17 @@ function ProfilePage() {
                   </div>
 
                   <button
+                    onClick={() => setSelectedAvatarId(defaultPlayerAvatarId)}
+                    className={`border-4 border-black px-4 py-3 font-mono text-sm font-black uppercase shadow-[4px_4px_0px_#000] transition-transform hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#000] ${
+                      selectedAvatarId === defaultPlayerAvatarId
+                        ? "bg-yellow-300 text-black"
+                        : "bg-[#12122f] text-cyan-100 hover:bg-[#1b1b49]"
+                    }`}
+                  >
+                    Set Default Character
+                  </button>
+
+                  <button
                     onClick={handleAvatarSave}
                     disabled={isSavingAvatar || selectedAvatarId === profile.playerAvatarId}
                     className="arcade-button-orange w-full disabled:opacity-60"
