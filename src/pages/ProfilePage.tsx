@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getSupabaseClient } from "../lib/supabase";
 import { getProfileDashboard, updatePlayerAvatar, updateUsername } from "../services/profileService";
 import type { ProfileDashboardData } from "../services/profileService";
+import { deleteLevel } from "../services/levelStorage";
 import { PlayerAvatar } from "../features/playerAvatar/PlayerAvatar";
 import {
   defaultPlayerAvatarId,
@@ -38,12 +39,16 @@ function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [isDeletingMap, setIsDeletingMap] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const supabase = getSupabaseClient();
 
   const loadProfile = async () => {
     setIsLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const data = await getProfileDashboard();
@@ -63,6 +68,7 @@ function ProfilePage() {
   const handleAvatarSave = async () => {
     setIsSavingAvatar(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       await updatePlayerAvatar(selectedAvatarId);
@@ -98,6 +104,7 @@ function ProfilePage() {
 
     setIsSaving(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       await updateUsername(nextUsername);
@@ -109,6 +116,48 @@ function ProfilePage() {
       setError(message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (level: { id: string; name: string }) => {
+    setDeleteTarget(level);
+    setError("");
+    setSuccessMessage("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setIsDeletingMap(true);
+    setError("");
+
+    try {
+      await deleteLevel(deleteTarget.id);
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              createdMaps: current.createdMaps.filter((level) => level.id !== deleteTarget.id),
+            }
+          : current,
+      );
+      setDeleteTarget(null);
+      setSuccessMessage("Map deleted successfully.");
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to delete level.";
+
+      setError(
+        message === "Level not found or you do not have permission to delete it."
+          ? "Permission denied."
+          : message,
+      );
+    } finally {
+      setIsDeletingMap(false);
     }
   };
 
@@ -152,6 +201,14 @@ function ProfilePage() {
           <div className="arcade-panel mb-6 p-4">
             <p className="font-mono text-sm font-black uppercase text-rose-300">
               {error}
+            </p>
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="arcade-panel mb-6 p-4">
+            <p className="font-mono text-sm font-black uppercase text-lime-300">
+              {successMessage}
             </p>
           </div>
         ) : null}
@@ -308,6 +365,14 @@ function ProfilePage() {
                           <span>Difficulty: {level.difficulty}</span>
                           <span>Created: {formatDate(level.created_at)}</span>
                         </div>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button
+                            onClick={() => handleDeleteClick({ id: level.id, name: level.name })}
+                            className="arcade-button-rose px-4 py-2 text-xs"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -339,6 +404,37 @@ function ProfilePage() {
                     ))
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {deleteTarget ? (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4">
+            <div className="arcade-panel w-full max-w-xl p-5 sm:p-6">
+              <h2 className="arcade-section-label">Confirm Delete</h2>
+              <p className="font-mono text-2xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">
+                Delete this map permanently?
+              </p>
+              <p className="mt-3 font-mono text-sm font-bold uppercase leading-6 text-cyan-200">
+                "{deleteTarget.name}" will be removed from your saved maps.
+              </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="arcade-button-cyan w-full"
+                  disabled={isDeletingMap}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="arcade-button-rose w-full disabled:opacity-50"
+                  disabled={isDeletingMap}
+                >
+                  {isDeletingMap ? "Deleting..." : "Delete"}
+                </button>
               </div>
             </div>
           </div>

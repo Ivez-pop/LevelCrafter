@@ -82,6 +82,7 @@ function advanceDynamicDangers(
     x < 0 ||
     x >= nextGrid[y].length ||
     nextGrid[y][x] === "wall" ||
+    nextGrid[y][x] === "hazard" ||
     dangers.some((danger) => danger.x === x && danger.y === y);
 
   for (const danger of dangers) {
@@ -142,6 +143,8 @@ export function useGame(): GameState & GameActions {
   const [moves, setMoves] = useState(0);
   const movesRef = useRef(0);
   const startedAtRef = useRef<number | null>(null);
+  const playerRef = useRef<Position | null>(null);
+  const statusRef = useRef<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const dynamicDirectionsRef = useRef(new Map<string, DynamicDangerState>());
   const explosionTimeoutRef = useRef<number | null>(null);
   const movementTimeoutRef = useRef<number | null>(null);
@@ -168,6 +171,14 @@ export function useGame(): GameState & GameActions {
     setIsSelectingVent(false);
     setVentDestinations([]);
   }, []);
+
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const clearMovementTimeout = useCallback(() => {
     if (movementTimeoutRef.current !== null) {
@@ -535,7 +546,13 @@ export function useGame(): GameState & GameActions {
   const activeLevelId = level?.id;
 
   useEffect(() => {
-    if (!activeLevelId || !player || status === "idle" || status === "restart" || status === "win") {
+    if (
+      !activeLevelId ||
+      !playerRef.current ||
+      statusRef.current === "idle" ||
+      statusRef.current === "restart" ||
+      statusRef.current === "win"
+    ) {
       return;
     }
 
@@ -547,7 +564,7 @@ export function useGame(): GameState & GameActions {
 
         const advanced = advanceDynamicDangers(
           currentLevel.grid,
-          player,
+          playerRef.current ?? { x: -1, y: -1 },
           dynamicDirectionsRef.current,
         );
 
@@ -561,8 +578,12 @@ export function useGame(): GameState & GameActions {
           // Dynamic hazards can kill the player without a player-initiated move,
           // so this path mirrors tile deaths and cancels transient vent state.
           clearVentSelection();
-          setDeathFromTile(advanced.grid[player.y]?.[player.x]);
-          triggerHazardReset(player);
+          const currentPlayer = playerRef.current;
+
+          if (currentPlayer) {
+            setDeathFromTile(advanced.grid[currentPlayer.y]?.[currentPlayer.x]);
+            triggerHazardReset(currentPlayer);
+          }
         }
 
         return { ...currentLevel, grid: advanced.grid };
@@ -572,7 +593,7 @@ export function useGame(): GameState & GameActions {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [activeLevelId, clearVentSelection, player, setDeathFromTile, status, triggerHazardReset]);
+  }, [activeLevelId, clearVentSelection, setDeathFromTile, triggerHazardReset]);
 
   useEffect(() => {
     if (!isSelectingVent) {
