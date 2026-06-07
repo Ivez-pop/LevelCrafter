@@ -81,6 +81,7 @@ function advanceDynamicDangers(
     x < 0 ||
     x >= nextGrid[y].length ||
     nextGrid[y][x] === "wall" ||
+    nextGrid[y][x] === "exit" ||
     nextGrid[y][x] === "hazard" ||
     dangers.some((danger) => danger.x === x && danger.y === y);
 
@@ -145,6 +146,7 @@ export function useGame(): GameState & GameActions {
   const playerRef = useRef<Position | null>(null);
   const statusRef = useRef<"idle" | "blocked" | "continue" | "collect" | "restart" | "win">("idle");
   const dynamicDirectionsRef = useRef(new Map<string, DynamicDangerState>());
+  const dynamicIntervalRef = useRef<number | null>(null);
   const explosionTimeoutRef = useRef<number | null>(null);
   const movementTimeoutRef = useRef<number | null>(null);
   const countdownTimeoutRef = useRef<number | null>(null);
@@ -202,6 +204,21 @@ export function useGame(): GameState & GameActions {
     }
     countdownStepRefs.current = [];
   }, []);
+
+  const freezeGameplaySimulation = useCallback(() => {
+    clearMovementTimeout();
+    clearCountdownTimeout();
+
+    if (explosionTimeoutRef.current !== null) {
+      window.clearTimeout(explosionTimeoutRef.current);
+      explosionTimeoutRef.current = null;
+    }
+
+    if (dynamicIntervalRef.current !== null) {
+      window.clearInterval(dynamicIntervalRef.current);
+      dynamicIntervalRef.current = null;
+    }
+  }, [clearCountdownTimeout, clearMovementTimeout]);
 
   const startCountdown = useCallback(
     (previewSeconds: number) => {
@@ -460,6 +477,7 @@ export function useGame(): GameState & GameActions {
       setDeathReason(null);
       setStatus("win");
       setMessage("You win! Congratulations.");
+      freezeGameplaySimulation();
       retroAudio.playWin();
       return;
     }
@@ -476,7 +494,7 @@ export function useGame(): GameState & GameActions {
     setStatus("continue");
     setMessage("");
     retroAudio.playMove();
-  }, [clearMovementTimeout, countdownValue, enterVentSelection, level, player, playerDirection, pulseMovement, status, collected, setDeathFromTile, triggerHazardReset, isSelectingVent]);
+  }, [clearMovementTimeout, countdownValue, enterVentSelection, freezeGameplaySimulation, level, player, playerDirection, pulseMovement, status, collected, setDeathFromTile, triggerHazardReset, isSelectingVent]);
 
   const handlePlayLevel = useCallback(async (id: string) => {
     console.log("[useGame] handlePlayLevel", id);
@@ -551,6 +569,10 @@ export function useGame(): GameState & GameActions {
     }
 
     const intervalId = window.setInterval(() => {
+      if (statusRef.current === "win") {
+        return;
+      }
+
       setLevel((currentLevel) => {
         if (!currentLevel) {
           return currentLevel;
@@ -586,8 +608,17 @@ export function useGame(): GameState & GameActions {
 
     return () => {
       window.clearInterval(intervalId);
+      if (dynamicIntervalRef.current === intervalId) {
+        dynamicIntervalRef.current = null;
+      }
     };
   }, [activeLevelId, clearVentSelection, setDeathFromTile, triggerHazardReset]);
+
+  useEffect(() => {
+    if (status === "win") {
+      freezeGameplaySimulation();
+    }
+  }, [freezeGameplaySimulation, status]);
 
   useEffect(() => {
     if (!isSelectingVent) {
