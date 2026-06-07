@@ -3,7 +3,11 @@ import { getSupabaseClient } from "../lib/supabase";
 import type { Level } from "../types/level";
 import type { Json } from "../types/supabase";
 import { getGlobalRankings } from "./rankingService";
-import { defaultPlayerAvatarId, type PlayerAvatarId } from "../features/playerAvatar/avatarOptions";
+import {
+  defaultPlayerAvatarId,
+  normalizePlayerAvatarId,
+  type PlayerAvatarId,
+} from "../features/playerAvatar/avatarOptions";
 import { writeStoredPlayerAvatar } from "../features/playerAvatar/avatarStorage";
 
 interface PublicUserRow {
@@ -183,13 +187,14 @@ export async function updateUsername(newUsername: string) {
   }
 }
 
-export async function updatePlayerAvatar(avatarId: PlayerAvatarId) {
+export async function updatePlayerAvatar(avatarId: string) {
   const supabase = getSupabaseClient();
   const user = await getAuthenticatedUser();
+  const normalizedAvatarId = normalizePlayerAvatarId(avatarId);
 
   const { error: authError } = await supabase.auth.updateUser({
     data: {
-      player_avatar: avatarId,
+      player_avatar: normalizedAvatarId,
     },
   });
 
@@ -200,7 +205,7 @@ export async function updatePlayerAvatar(avatarId: PlayerAvatarId) {
   const result = await supabase
     .from("users")
     .update({
-      avatar_url: avatarId,
+      avatar_url: normalizedAvatarId,
     })
     .eq("id", user.id);
 
@@ -208,7 +213,7 @@ export async function updatePlayerAvatar(avatarId: PlayerAvatarId) {
     throw result.error;
   }
 
-  writeStoredPlayerAvatar(user.id, avatarId);
+  writeStoredPlayerAvatar(user.id, normalizedAvatarId);
 
   return ensurePublicUserProfile(user);
 }
@@ -281,7 +286,7 @@ export async function getProfileDashboard(): Promise<ProfileDashboardData> {
 
   const globalRank = rankings.find((entry) => entry.userId === user.id)?.rank ?? null;
   const metadataAvatar = readMetadataString(user, "player_avatar");
-  const playerAvatarId = (profile.avatar_url ?? metadataAvatar ?? defaultPlayerAvatarId) as PlayerAvatarId;
+  const playerAvatarId = normalizePlayerAvatarId(profile.avatar_url ?? metadataAvatar ?? defaultPlayerAvatarId);
 
   writeStoredPlayerAvatar(user.id, playerAvatarId);
 

@@ -1,5 +1,4 @@
 import { getPlayerAvatarOption, type PlayerAvatarId } from "./avatarOptions";
-import { getTileAsset } from "../tiles/tileAssets";
 import type { FacingDirection } from "../../game/movement";
 
 interface PlayerAvatarProps {
@@ -16,9 +15,7 @@ export function PlayerAvatar({
   isMoving = false,
 }: PlayerAvatarProps) {
   const avatar = getPlayerAvatarOption(avatarId);
-  const playerAsset = getTileAsset("player");
   const facingClass = direction === "left" ? "scale-x-[-1]" : "scale-x-100";
-  const motionClass = isMoving ? "player-avatar-moving" : "player-avatar-idle";
 
   return (
     <div
@@ -26,14 +23,12 @@ export function PlayerAvatar({
       aria-label={avatar.name}
       role="img"
     >
-      <div className={`player-avatar-root absolute inset-0 ${motionClass}`.trim()}>
-        <img
-          src={playerAsset.src ?? undefined}
-          alt={playerAsset.alt}
-          draggable={false}
-          className="player-avatar-sprite block h-full w-full object-contain"
-        />
-      </div>
+      <img
+        src={avatar.src}
+        alt={avatar.name}
+        draggable={false}
+        className={`block h-full w-full object-contain ${isMoving ? "scale-105" : ""}`.trim()}
+      />
     </div>
   );
 }

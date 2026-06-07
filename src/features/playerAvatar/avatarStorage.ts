@@ -1,4 +1,4 @@
-import { defaultPlayerAvatarId, type PlayerAvatarId } from "./avatarOptions";
+import { normalizePlayerAvatarId, type PlayerAvatarId } from "./avatarOptions";
 
 const globalAvatarKey = "levelcrafter:player-avatar";
 
@@ -11,7 +11,7 @@ export function readStoredPlayerAvatar(userId?: string | null): PlayerAvatarId {
     window.localStorage.getItem(getAvatarStorageKey(userId)) ??
     window.localStorage.getItem(globalAvatarKey);
 
-  return (stored as PlayerAvatarId | null) ?? defaultPlayerAvatarId;
+  return normalizePlayerAvatarId(stored);
 }
 
 export function writeStoredPlayerAvatar(userId: string | null | undefined, avatarId: PlayerAvatarId) {

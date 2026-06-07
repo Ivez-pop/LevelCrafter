@@ -5,6 +5,7 @@ import { getProfileDashboard, updatePlayerAvatar, updateUsername } from "../serv
 import type { ProfileDashboardData } from "../services/profileService";
 import { PlayerAvatar } from "../features/playerAvatar/PlayerAvatar";
 import {
+  defaultPlayerAvatarId,
   getPlayerAvatarOption,
   playerAvatarOptions,
   type PlayerAvatarId,
@@ -31,7 +32,9 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileDashboardData | null>(null);
   const [username, setUsername] = useState("");
-  const [selectedAvatarId, setSelectedAvatarId] = useState<PlayerAvatarId>("crimson-crewmate");
+  const [selectedAvatarId, setSelectedAvatarId] = useState<PlayerAvatarId | "player">(
+    defaultPlayerAvatarId,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
