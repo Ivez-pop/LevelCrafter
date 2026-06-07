@@ -3,6 +3,11 @@ import type { Database } from "../types/supabase";
 
 let supabaseClient: SupabaseClient<Database> | null = null;
 
+/**
+ * Lazily creates a singleton Supabase client.
+ * Centralizing this prevents duplicate auth listeners and keeps environment
+ * validation in one place.
+ */
 export function getSupabaseClient() {
   if (supabaseClient) {
     return supabaseClient;

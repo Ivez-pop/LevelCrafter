@@ -8,6 +8,11 @@ export type GameResult =
   | "vent"
   | "win";
 
+/**
+ * Converts a board tile into the high-level gameplay event it triggers.
+ * Dynamic danger tiles intentionally share the same restart result as bombs so
+ * the play hook can keep death/reset handling in one path.
+ */
 export function evaluateTile(
   tile: Tile
 ): GameResult {

@@ -3,6 +3,11 @@ import type { GlobalRankingEntry } from "../types/leaderboard";
 
 export const DEFAULT_GLOBAL_RANKING_MIN_COMPLETED_MAPS = 3;
 
+/**
+ * Reads the materialized/global ranking view.
+ * A minimum completed-map count keeps one-off high scores from dominating the
+ * global board before a player has meaningful history.
+ */
 export async function getGlobalRankings(
   minCompletedMaps = DEFAULT_GLOBAL_RANKING_MIN_COMPLETED_MAPS,
   limit = 100,

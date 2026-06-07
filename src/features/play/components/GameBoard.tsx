@@ -56,6 +56,10 @@ export function GameBoard({
     setDragPointerId(null);
   };
 
+  /**
+   * Converts drag-over-adjacent-cell gestures into single grid moves.
+   * This keeps touch/mouse movement aligned with keyboard movement rules.
+   */
   const moveIfAdjacent = (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
     const deltaRow = toRow - fromRow;
     const deltaCol = toCol - fromCol;
@@ -104,6 +108,8 @@ export function GameBoard({
       return;
     }
 
+    // Avoid pointer capture so pointerenter continues to fire as the cursor
+    // crosses neighboring cells during drag-to-move.
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -177,6 +183,8 @@ export function GameBoard({
     };
   }, [dragPointerId]);
 
+  // Fast lookup used both for styling selectable vents and for validating click
+  // targets before delegating selection to the game hook.
   const destinationByKey = new Map(
     availableVentDestinations.map((destination) => [
       `${destination.x},${destination.y}`,

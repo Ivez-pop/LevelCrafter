@@ -20,6 +20,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Normalizes a Supabase level row into the app's runtime Level shape.
+ * Metadata is intentionally validated at the boundary because legacy rows or
+ * hand-edited records can otherwise crash the play/editor screens later.
+ */
 function mapLevelRow(row: LevelRow): Level {
   if (!isRecord(row.metadata)) {
     throw new Error("Level metadata is missing or invalid.");
@@ -62,6 +67,10 @@ function genId() {
   )}`;
 }
 
+/**
+ * Saves a level through an upsert so editor saves can create new maps or update
+ * the current draft without changing the UI flow.
+ */
 export async function saveLevel(level: Omit<Level, "id" | "createdAt">, levelId?: string): Promise<string> {
   const supabase = getSupabaseClient();
   const id = levelId ?? genId();
@@ -102,6 +111,8 @@ export async function deleteLevel(levelId: string) {
     throw new Error("You must be logged in to delete a level.");
   }
 
+  // Ownership is enforced in the delete query itself so a stale or malicious
+  // client-side level id cannot delete another user's map.
   const { error, count } = await supabase
     .from("levels")
     .delete({ count: "exact" })
@@ -137,6 +148,8 @@ export async function getLevelsByDifficulty(difficulty: "easy" | "medium" | "har
 
   const levels: Level[] = [];
 
+  // Skip invalid records rather than failing the whole picker. This keeps one
+  // bad community level from hiding every other playable map.
   for (const row of data ?? []) {
     try {
       levels.push(mapLevelRow(row as LevelRow));
@@ -214,6 +227,8 @@ function normalizeDifficulty(value: unknown, gridSize: number): Difficulty {
     return value;
   }
 
+  // Imported files may omit difficulty; infer it from square grid size when the
+  // dimensions match one of the supported difficulty presets.
   const inferred = Object.entries(difficultySizes).find(
     ([, size]) => size === gridSize,
   )?.[0];
@@ -242,6 +257,8 @@ function normalizeGrid(value: unknown): Tile[][] {
     throw new Error("Level grid rows must contain tiles.");
   }
 
+  // Imported levels are treated as untrusted input: validate shape, tile names,
+  // and core gameplay invariants before persisting anything to Supabase.
   const grid = value.map((row) => {
     if (!Array.isArray(row) || row.length !== width) {
       throw new Error("Level grid must be rectangular.");
@@ -315,6 +332,8 @@ export async function importLevelFromJson(file: File): Promise<string> {
 }
 
 export function encodeLevelCode(level: Omit<Level, "id" | "createdAt">): string {
+  // TextEncoder/TextDecoder keeps level codes Unicode-safe before base64
+  // encoding; btoa/atob alone only support Latin-1 strings reliably.
   const json = JSON.stringify(normalizeImportedLevel(level));
   const bytes = new TextEncoder().encode(json);
   const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");

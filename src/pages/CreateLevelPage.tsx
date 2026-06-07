@@ -4,8 +4,18 @@ import DifficultySelector from "../shared/components/DifficultySelector";
 import GridEditor from "../features/editor/components/GridEditor";
 import TilePalette from "../features/editor/components/TilePalette";
 import type { Level, Tile } from "../types/level";
-import { deleteLevel, encodeLevelCode, getLevelById, getLevelsByOwner, importLevelFromJson, saveLevel } from "../services/levelStorage";
-import { getAuthenticatedUser, publishCreatedLevel } from "../services/profileService";
+import {
+  deleteLevel,
+  encodeLevelCode,
+  getLevelById,
+  getLevelsByOwner,
+  importLevelFromJson,
+  saveLevel,
+} from "../services/levelStorage";
+import {
+  getAuthenticatedUser,
+  publishCreatedLevel,
+} from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
 import { difficultySizes, type Difficulty } from "../constants/difficulty";
@@ -46,6 +56,11 @@ function emptyGrid(size: number) {
   );
 }
 
+/**
+ * Downloads generated exports through a temporary object URL.
+ * The URL is revoked immediately after click dispatch to avoid leaking blob
+ * references during repeated exports in one browser session.
+ */
 function downloadFile(filename: string, contents: string, type: string) {
   const blob = new Blob([contents], { type });
   const url = URL.createObjectURL(blob);
@@ -68,15 +83,26 @@ function CreateLevelPage() {
   const [selectedTile, setSelectedTile] = useState<Tile>("wall");
   const [shareCode, setShareCode] = useState("");
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
-  const [bombPreviewSeconds, setBombPreviewSeconds] = useState<number>(defaultBombPreviewSeconds);
+  const [bombPreviewSeconds, setBombPreviewSeconds] = useState<number>(
+    defaultBombPreviewSeconds,
+  );
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteJson, setPasteJson] = useState(pastedJsonTemplate);
   const [importError, setImportError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
-  const [ownedLevels, setOwnedLevels] = useState<Array<{ id: string; name: string; difficulty: Difficulty; createdAt: number }>>([]);
-  const [importedSavedLevelId, setImportedSavedLevelId] = useState<string | null>(null);
+  const [ownedLevels, setOwnedLevels] = useState<
+    Array<{
+      id: string;
+      name: string;
+      difficulty: Difficulty;
+      createdAt: number;
+    }>
+  >([]);
+  const [importedSavedLevelId, setImportedSavedLevelId] = useState<
+    string | null
+  >(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deleteError, setDeleteError] = useState("");
@@ -85,6 +111,8 @@ function CreateLevelPage() {
   const navigate = useNavigate();
 
   const commitGrid = (nextGrid: Tile[][]) => {
+    // Store full grid snapshots because editor actions are small and this keeps
+    // undo/redo independent from how each action was produced.
     setHistory((items) => [...items, cloneGrid(grid)]);
     setFuture([]);
     setGrid(nextGrid);
@@ -153,7 +181,11 @@ function CreateLevelPage() {
     }
 
     const size = difficultySizes[difficulty];
-    const nextGrid = generateMaze({ width: size, height: size, algorithm: "dfs" });
+    const nextGrid = generateMaze({
+      width: size,
+      height: size,
+      algorithm: "dfs",
+    });
 
     setDifficulty(difficulty);
     setGrid(nextGrid);
@@ -182,6 +214,8 @@ function CreateLevelPage() {
 
     const updatedGrid = cloneGrid(grid);
 
+    // Player and exit are singleton gameplay markers; painting either one moves
+    // the existing marker instead of allowing invalid duplicate starts/exits.
     if (selectedTile === "player" || selectedTile === "exit") {
       for (const row of updatedGrid) {
         const existingIndex = row.indexOf(selectedTile);
@@ -248,6 +282,8 @@ function CreateLevelPage() {
     setEditingLevelId(id);
     setImportedSavedLevelId(null);
 
+    // Publish ownership metadata in the background. The save itself has already
+    // succeeded, so a profile-sync failure should not discard the editor draft.
     void publishCreatedLevel({
       id,
       ...draft,
@@ -310,7 +346,11 @@ function CreateLevelPage() {
       setOwnedLevels(levels);
     } catch (error) {
       console.error("[CreateLevelPage] failed to load owned levels", error);
-      setImportError(error instanceof Error ? error.message : "Failed to load your saved levels.");
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load your saved levels.",
+      );
       setOwnedLevels([]);
     } finally {
       setImportLoading(false);
@@ -318,12 +358,16 @@ function CreateLevelPage() {
   };
 
   const applyImportedLevelToEditor = (level: Level) => {
+    // Imported saved levels are loaded as editable copies. Keeping editingLevelId
+    // empty prevents accidental overwrites until the user explicitly saves.
     setDifficulty(level.difficulty);
     setGrid(level.grid.map((row) => [...row]));
     setHistory([]);
     setFuture([]);
     setLevelName(level.name);
-    setBombPreviewSeconds(level.bombPreviewSeconds ?? defaultBombPreviewSeconds);
+    setBombPreviewSeconds(
+      level.bombPreviewSeconds ?? defaultBombPreviewSeconds,
+    );
     setEditingLevelId(null);
     setImportedSavedLevelId(null);
     setDeleteMessage("");
@@ -350,7 +394,11 @@ function CreateLevelPage() {
       setShowImportModal(false);
     } catch (error) {
       console.error("[CreateLevelPage] failed to import level", error);
-      setImportError(error instanceof Error ? error.message : "Failed to import the selected level.");
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : "Failed to import the selected level.",
+      );
     }
   };
 
@@ -359,7 +407,9 @@ function CreateLevelPage() {
 
     try {
       const importedLevelId = await importLevelFromJson(
-        new File([pasteJson], "pasted-level.json", { type: "application/json" }),
+        new File([pasteJson], "pasted-level.json", {
+          type: "application/json",
+        }),
       );
       const importedLevel = await getLevelById(importedLevelId);
 
@@ -371,7 +421,11 @@ function CreateLevelPage() {
       setShowPasteModal(false);
     } catch (error) {
       console.error("[CreateLevelPage] failed to paste JSON level", error);
-      setImportError(error instanceof Error ? error.message : "Failed to import the pasted JSON.");
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : "Failed to import the pasted JSON.",
+      );
     }
   };
 
@@ -395,13 +449,19 @@ function CreateLevelPage() {
       setShareCode("");
       setEditingLevelId(null);
       setImportedSavedLevelId(null);
-      setOwnedLevels((levels) => levels.filter((level) => level.id !== importedSavedLevelId));
+      setOwnedLevels((levels) =>
+        levels.filter((level) => level.id !== importedSavedLevelId),
+      );
       setShowDeleteConfirm(false);
       setShowImportModal(false);
       setDeleteMessage("Level deleted successfully.");
     } catch (error) {
       console.error("[CreateLevelPage] failed to delete level", error);
-      setDeleteError(error instanceof Error ? error.message : "Failed to delete the selected level.");
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete the selected level.",
+      );
     } finally {
       setDeletingLevel(false);
     }
@@ -410,8 +470,15 @@ function CreateLevelPage() {
   return (
     <div className="arcade-screen relative min-h-screen">
       <div className="absolute right-4 top-2 z-50 flex gap-3">
-        <button onClick={() => navigate("/")} className="arcade-button-cyan">HOME</button>
-        <button onClick={() => navigate("/profile")} className="arcade-button-violet">PROFILE</button>
+        <button onClick={() => navigate("/")} className="arcade-button-cyan">
+          HOME
+        </button>
+        <button
+          onClick={() => navigate("/profile")}
+          className="arcade-button-violet"
+        >
+          PROFILE
+        </button>
       </div>
       <div className="arcade-shell grid min-h-[calc(100vh-2rem)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] sm:min-h-[calc(100vh-3rem)]">
         <div className="arcade-panel flex min-h-0 flex-col gap-5 p-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-auto">
@@ -428,8 +495,8 @@ function CreateLevelPage() {
             <DifficultySelector onSelect={createGrid} />
 
             {difficulty && (
-              <div className="arcade-chip inline-flex bg-yellow-300 text-black">
-                {difficulty.toUpperCase()}
+              <div className="border-4 border-black bg-lime-400 px-4 py-3 text-center font-mono text-sm font-black uppercase text-black shadow-[6px_6px_0px_#000]">
+                ✓ {difficulty.toUpperCase()} SELECTED
               </div>
             )}
           </section>
@@ -461,7 +528,10 @@ function CreateLevelPage() {
           <section>
             <h3 className="arcade-section-label">Tiles</h3>
 
-            <TilePalette selectedTile={selectedTile} onSelect={handleTileSelect} />
+            <TilePalette
+              selectedTile={selectedTile}
+              onSelect={handleTileSelect}
+            />
           </section>
 
           <section>
@@ -481,13 +551,22 @@ function CreateLevelPage() {
               >
                 Redo
               </button>
-              <button onClick={handleGenerateStarter} className="arcade-button-orange">
+              <button
+                onClick={handleGenerateStarter}
+                className="arcade-button-orange"
+              >
                 Starter
               </button>
-              <button onClick={handleValidateLevel} className="arcade-button-lime">
+              <button
+                onClick={handleValidateLevel}
+                className="arcade-button-lime"
+              >
                 Validate
               </button>
-              <button onClick={() => setShowTimerModal(true)} className="arcade-button-cyan col-span-2">
+              <button
+                onClick={() => setShowTimerModal(true)}
+                className="arcade-button-cyan col-span-2"
+              >
                 SET TIMER
               </button>
             </div>
@@ -510,7 +589,10 @@ function CreateLevelPage() {
 
           <div className="mt-auto grid gap-3">
             {grid.length > 0 && (
-              <button onClick={handleSaveLevel} className="arcade-button-lime w-full">
+              <button
+                onClick={handleSaveLevel}
+                className="arcade-button-lime w-full"
+              >
                 Save Level
               </button>
             )}
@@ -525,7 +607,10 @@ function CreateLevelPage() {
             )}
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button onClick={handleGenerateMaze} className="arcade-button-yellow">
+              <button
+                onClick={handleGenerateMaze}
+                className="arcade-button-yellow"
+              >
                 GENERATE MAZE
               </button>
 
@@ -539,24 +624,39 @@ function CreateLevelPage() {
                 PASTE JSON
               </button>
 
-              <button onClick={openImportModal} className="arcade-button-orange">
+              <button
+                onClick={openImportModal}
+                className="arcade-button-orange"
+              >
                 Import Saved Level
               </button>
 
-              <button onClick={handleExportJson} className="arcade-button-violet">
+              <button
+                onClick={handleExportJson}
+                className="arcade-button-violet"
+              >
                 Export JSON
               </button>
 
-              <button onClick={handleCopyLevelCode} className="arcade-button-cyan">
+              <button
+                onClick={handleCopyLevelCode}
+                className="arcade-button-cyan"
+              >
                 Share Code
               </button>
 
-              <button onClick={handleExportStandalone} className="arcade-button-yellow">
+              <button
+                onClick={handleExportStandalone}
+                className="arcade-button-yellow"
+              >
                 Export Game
               </button>
             </div>
 
-            <button onClick={() => navigate("/play")} className="arcade-button-orange w-full">
+            <button
+              onClick={() => navigate("/play")}
+              className="arcade-button-orange w-full"
+            >
               Playtest
             </button>
           </div>
@@ -604,7 +704,10 @@ function CreateLevelPage() {
                   Import Saved Level
                 </h2>
               </div>
-              <button onClick={() => setShowImportModal(false)} className="arcade-button-cyan">
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="arcade-button-cyan"
+              >
                 Close
               </button>
             </div>
@@ -637,10 +740,13 @@ function CreateLevelPage() {
                           {level.name}
                         </div>
                         <div className="font-mono text-xs font-bold uppercase text-cyan-200">
-                          {level.difficulty} • {new Date(level.createdAt).toLocaleDateString()}
+                          {level.difficulty} •{" "}
+                          {new Date(level.createdAt).toLocaleDateString()}
                         </div>
                       </div>
-                      <div className="arcade-chip bg-lime-300 text-black">Import</div>
+                      <div className="arcade-chip bg-lime-300 text-black">
+                        Import
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -672,7 +778,8 @@ function CreateLevelPage() {
             </div>
 
             <p className="mb-4 font-mono text-sm font-bold uppercase leading-6 text-cyan-200">
-              Replace the template with exported LevelCrafter JSON, then import it into the editor.
+              Replace the template with exported LevelCrafter JSON, then import
+              it into the editor.
             </p>
 
             {importError && (
@@ -689,7 +796,10 @@ function CreateLevelPage() {
             />
 
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={handlePasteImport} className="arcade-button-lime">
+              <button
+                onClick={handlePasteImport}
+                className="arcade-button-lime"
+              >
                 Import
               </button>
               <button
@@ -716,7 +826,10 @@ function CreateLevelPage() {
                   Bomb Preview Timer
                 </h2>
               </div>
-              <button onClick={() => setShowTimerModal(false)} className="arcade-button-cyan">
+              <button
+                onClick={() => setShowTimerModal(false)}
+                className="arcade-button-cyan"
+              >
                 Close
               </button>
             </div>

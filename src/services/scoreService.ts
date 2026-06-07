@@ -33,6 +33,11 @@ function normalizeBombPreviewSeconds(value: number | undefined) {
   return Math.min(10, Math.max(1, Math.floor(value)));
 }
 
+/**
+ * Maps database column names to the camelCase BestScore contract used by React.
+ * Keeping this conversion centralized prevents view components from depending
+ * on Supabase naming details.
+ */
 function mapBestScore(row: {
   id: string;
   user_id: string;
@@ -57,6 +62,10 @@ function mapBestScore(row: {
   };
 }
 
+/**
+ * Calculates the score breakdown shown to players and persisted for rankings.
+ * Shorter bomb previews deliberately reward higher risk through the multiplier.
+ */
 export function calculateCompletionScore({
   coinsCollected,
   moves,
@@ -106,6 +115,8 @@ export async function updateBestScore(
       throw readError;
     }
 
+    // Best scores are monotonic: a completed run is stored separately, but this
+    // summary row only changes when the new score improves the player's record.
     if (existing && existing.best_score >= run.score) {
       return mapBestScore(existing);
     }

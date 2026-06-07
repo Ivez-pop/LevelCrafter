@@ -31,6 +31,8 @@ export const fireTile = {
   alt: "Fire tile",
 };
 
+// One asset table drives editor, play board, and exports so tile additions have
+// a single visual mapping to maintain.
 const tileAssets: Record<Tile, TileAsset> = {
   empty: {
     src: null,
@@ -101,4 +103,6 @@ const tileAssets: Record<Tile, TileAsset> = {
 
 export const getTileAsset = (tile: Tile): TileAsset => tileAssets[tile];
 
+// Placeholder kept for compatibility with older board code that expected tile
+// classes from this module. Styling now lives in TileArtwork and CSS utilities.
 export const getTileStyle = () => "";

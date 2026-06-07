@@ -15,6 +15,11 @@ const interactiveSelector = [
   ".arcade-button-orange",
 ].join(",");
 
+/**
+ * Bridges React routing/user gestures into the singleton audio engine.
+ * The document-level pointer listener is captured so nested arcade buttons get
+ * consistent click SFX without every component wiring audio manually.
+ */
 export function useRetroAudio() {
   const location = useLocation();
 

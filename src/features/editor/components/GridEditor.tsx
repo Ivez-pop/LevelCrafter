@@ -9,6 +9,8 @@ interface GridEditorProps {
 
 function GridEditor({ grid, onPaintCell }: GridEditorProps) {
   const [isPainting, setIsPainting] = useState(false);
+  // Smaller boards get larger cells so the editor remains comfortable across
+  // easy, medium, and hard difficulty grids.
   const tileSize = grid.length <= 5 ? 72 : grid.length <= 8 ? 60 : 48;
 
   return (

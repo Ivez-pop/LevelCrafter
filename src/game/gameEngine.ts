@@ -32,12 +32,22 @@ export function getVentPositions(level: Level): Position[] {
   return vents;
 }
 
+/**
+ * Returns every usable destination for a vent entry.
+ * The entry itself is excluded so a single click cannot teleport the player
+ * back onto the same tile and look like a no-op.
+ */
 export function getVentDestinations(level: Level, entry: Position): Position[] {
   return getVentPositions(level).filter(
     (vent) => vent.x !== entry.x || vent.y !== entry.y,
   );
 }
 
+/**
+ * Resolves one player step against the immutable level grid.
+ * The caller owns side effects such as coin removal, sounds, scoring, and
+ * vent-selection UI so this engine layer stays deterministic and easy to test.
+ */
 export function processMove(
   level: Level,
   player: Position,
