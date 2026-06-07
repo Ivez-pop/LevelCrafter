@@ -4,7 +4,7 @@ import DifficultySelector from "../shared/components/DifficultySelector";
 import GridEditor from "../features/editor/components/GridEditor";
 import TilePalette from "../features/editor/components/TilePalette";
 import type { Level, Tile } from "../types/level";
-import { deleteLevel, encodeLevelCode, getLevelById, getLevelsByOwner, saveLevel } from "../services/levelStorage";
+import { deleteLevel, encodeLevelCode, getLevelById, getLevelsByOwner, importLevelFromJson, saveLevel } from "../services/levelStorage";
 import { getAuthenticatedUser, publishCreatedLevel } from "../services/profileService";
 import { validateLevel } from "../services/levelValidation";
 import { buildStandaloneGameHtml } from "../services/standaloneExport";
@@ -14,6 +14,27 @@ import { generateMaze } from "../features/mazeGenerator/mazeGenerator";
 type LevelDraft = Omit<Level, "id" | "createdAt">;
 const defaultBombPreviewSeconds = 3;
 const bombPreviewOptions = Array.from({ length: 10 }, (_, index) => index + 1);
+const pastedJsonTemplate = `{
+"name": "Level Name",
+"difficulty": "hard",
+"bombPreviewSeconds": 2,
+"width": 12,
+"height": 12,
+"grid": [
+["wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall"],
+["wall","player","empty","empty","empty","empty","empty","empty","empty","empty","exit","wall"],
+["wall","empty","hazard","empty","empty","vent","empty","empty","empty","empty","empty","wall"],
+["wall","empty","movingFireHorizontal","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","empty","empty","empty","empty","empty","empty","empty","empty","empty","empty","wall"],
+["wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall"]
+]
+}`;
 
 function cloneGrid(grid: Tile[][]) {
   return grid.map((row) => [...row]);
@@ -50,6 +71,8 @@ function CreateLevelPage() {
   const [bombPreviewSeconds, setBombPreviewSeconds] = useState<number>(defaultBombPreviewSeconds);
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteJson, setPasteJson] = useState(pastedJsonTemplate);
   const [importError, setImportError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
   const [ownedLevels, setOwnedLevels] = useState<Array<{ id: string; name: string; difficulty: Difficulty; createdAt: number }>>([]);
@@ -294,6 +317,19 @@ function CreateLevelPage() {
     }
   };
 
+  const applyImportedLevelToEditor = (level: Level) => {
+    setDifficulty(level.difficulty);
+    setGrid(level.grid.map((row) => [...row]));
+    setHistory([]);
+    setFuture([]);
+    setLevelName(level.name);
+    setBombPreviewSeconds(level.bombPreviewSeconds ?? defaultBombPreviewSeconds);
+    setEditingLevelId(null);
+    setImportedSavedLevelId(null);
+    setDeleteMessage("");
+    setDeleteError("");
+  };
+
   const importLevelIntoEditor = async (levelId: string) => {
     setImportError("");
 
@@ -310,20 +346,32 @@ function CreateLevelPage() {
         throw new Error("That level no longer exists.");
       }
 
-      setDifficulty(level.difficulty);
-      setGrid(level.grid.map((row) => [...row]));
-      setHistory([]);
-      setFuture([]);
-      setLevelName(level.name);
-      setBombPreviewSeconds(level.bombPreviewSeconds ?? defaultBombPreviewSeconds);
-      setEditingLevelId(level.id);
-      setImportedSavedLevelId(level.id);
-      setDeleteMessage("");
-      setDeleteError("");
+      applyImportedLevelToEditor(level);
       setShowImportModal(false);
     } catch (error) {
       console.error("[CreateLevelPage] failed to import level", error);
       setImportError(error instanceof Error ? error.message : "Failed to import the selected level.");
+    }
+  };
+
+  const handlePasteImport = async () => {
+    setImportError("");
+
+    try {
+      const importedLevelId = await importLevelFromJson(
+        new File([pasteJson], "pasted-level.json", { type: "application/json" }),
+      );
+      const importedLevel = await getLevelById(importedLevelId);
+
+      if (!importedLevel) {
+        throw new Error("Imported level could not be loaded.");
+      }
+
+      applyImportedLevelToEditor(importedLevel);
+      setShowPasteModal(false);
+    } catch (error) {
+      console.error("[CreateLevelPage] failed to paste JSON level", error);
+      setImportError(error instanceof Error ? error.message : "Failed to import the pasted JSON.");
     }
   };
 
@@ -460,7 +508,7 @@ function CreateLevelPage() {
             />
           )}
 
-          <div className="mt-auto grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="mt-auto grid gap-3">
             {grid.length > 0 && (
               <button onClick={handleSaveLevel} className="arcade-button-lime w-full">
                 Save Level
@@ -476,33 +524,48 @@ function CreateLevelPage() {
               </button>
             )}
 
-            <button onClick={handleGenerateMaze} className="arcade-button-yellow w-full">
-              GENERATE MAZE
-            </button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button onClick={handleGenerateMaze} className="arcade-button-yellow">
+                GENERATE MAZE
+              </button>
 
-            <button onClick={openImportModal} className="arcade-button-orange w-full">
-              Import Saved Level
-            </button>
+              <button
+                onClick={() => {
+                  setImportError("");
+                  setShowPasteModal(true);
+                }}
+                className="arcade-button-violet"
+              >
+                PASTE JSON
+              </button>
 
-            <button onClick={handleExportJson} className="arcade-button-violet w-full">
-              Export JSON
-            </button>
+              <button onClick={openImportModal} className="arcade-button-orange">
+                Import Saved Level
+              </button>
 
-            <button onClick={handleCopyLevelCode} className="arcade-button-cyan w-full">
-              Share Code
-            </button>
+              <button onClick={handleExportJson} className="arcade-button-violet">
+                Export JSON
+              </button>
 
-            <button
-              onClick={handleExportStandalone}
-              className="arcade-button-yellow w-full"
-            >
-              Export Game
-            </button>
+              <button onClick={handleCopyLevelCode} className="arcade-button-cyan">
+                Share Code
+              </button>
+
+              <button onClick={handleExportStandalone} className="arcade-button-yellow">
+                Export Game
+              </button>
+            </div>
 
             <button onClick={() => navigate("/play")} className="arcade-button-orange w-full">
               Playtest
             </button>
           </div>
+
+          {importError && !showPasteModal && (
+            <p className="mt-3 border-2 border-black bg-rose-500 px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000]">
+              {importError}
+            </p>
+          )}
         </div>
 
         <div className="arcade-panel flex min-h-[420px] min-w-0 items-center justify-center p-3 sm:p-6 lg:min-h-0">
@@ -583,6 +646,62 @@ function CreateLevelPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showPasteModal && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/85 p-4">
+          <div className="arcade-panel w-full max-w-4xl p-4 sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="arcade-kicker mb-2">Paste JSON</p>
+                <h2 className="font-mono text-2xl font-black uppercase text-yellow-300 drop-shadow-[3px_3px_0px_#000]">
+                  Import Level JSON
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPasteModal(false);
+                  setImportError("");
+                }}
+                className="arcade-button-cyan"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <p className="mb-4 font-mono text-sm font-bold uppercase leading-6 text-cyan-200">
+              Replace the template with exported LevelCrafter JSON, then import it into the editor.
+            </p>
+
+            {importError && (
+              <p className="mb-4 border-2 border-black bg-rose-500 px-3 py-2 font-mono text-xs font-black uppercase text-white shadow-[3px_3px_0px_#000]">
+                {importError}
+              </p>
+            )}
+
+            <textarea
+              value={pasteJson}
+              onChange={(e) => setPasteJson(e.target.value)}
+              spellCheck={false}
+              className="arcade-input min-h-[32rem] w-full font-mono text-xs leading-5"
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button onClick={handlePasteImport} className="arcade-button-lime">
+                Import
+              </button>
+              <button
+                onClick={() => {
+                  setPasteJson(pastedJsonTemplate);
+                  setShowPasteModal(false);
+                }}
+                className="arcade-button-cyan"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
