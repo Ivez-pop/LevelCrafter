@@ -1,37 +1,5 @@
 import { getSupabaseClient } from "../lib/supabase";
-import type {
-  BestScore,
-  CompletedGameplayRunInput,
-  ScoreBreakdown,
-  ScoreCalculationInput,
-} from "../types/leaderboard";
-
-const DIFFICULTY_MULTIPLIERS: Record<ScoreCalculationInput["difficulty"], number> = {
-  easy: 1.0,
-  medium: 1.25,
-  hard: 1.5,
-};
-
-const BOMB_PREVIEW_MULTIPLIERS: Record<number, number> = {
-  10: 1.0,
-  9: 1.05,
-  8: 1.1,
-  7: 1.15,
-  6: 1.2,
-  5: 1.25,
-  4: 1.3,
-  3: 1.4,
-  2: 1.6,
-  1: 2.0,
-};
-
-function normalizeBombPreviewSeconds(value: number | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return 3;
-  }
-
-  return Math.min(10, Math.max(1, Math.floor(value)));
-}
+import type { BestScore, CompletedGameplayRunInput } from "../types/leaderboard";
 
 /**
  * Maps database column names to the camelCase BestScore contract used by React.
@@ -62,40 +30,6 @@ function mapBestScore(row: {
   };
 }
 
-/**
- * Calculates the score breakdown shown to players and persisted for rankings.
- * Shorter bomb previews deliberately reward higher risk through the multiplier.
- */
-export function calculateCompletionScore({
-  coinsCollected,
-  moves,
-  timeSeconds,
-  difficulty,
-  bombPreviewSeconds,
-}: ScoreCalculationInput) {
-  const baseScore = 1000;
-  const coinBonus = coinsCollected * 100;
-  const movePenalty = moves * 5;
-  const timePenalty = timeSeconds * 2;
-  const rawScore = Math.max(0, baseScore + coinBonus - movePenalty - timePenalty);
-  const difficultyMultiplier = DIFFICULTY_MULTIPLIERS[difficulty];
-  const normalizedBombPreviewSeconds = normalizeBombPreviewSeconds(bombPreviewSeconds);
-  const bombPreviewMultiplier =
-    BOMB_PREVIEW_MULTIPLIERS[normalizedBombPreviewSeconds] ?? 1.0;
-  const finalScore = Math.floor(rawScore * difficultyMultiplier * bombPreviewMultiplier);
-
-  return {
-    baseScore,
-    coinBonus,
-    movePenalty,
-    timePenalty,
-    rawScore,
-    difficultyMultiplier,
-    bombPreviewMultiplier,
-    finalScore,
-  } satisfies ScoreBreakdown;
-}
-
 export async function updateBestScore(
   run: CompletedGameplayRunInput,
   playSessionId: string | null = null,
@@ -115,9 +49,11 @@ export async function updateBestScore(
       throw readError;
     }
 
+    const finalScore = Number((run.metadata as { finalScore?: number } | undefined)?.finalScore ?? 0);
+
     // Best scores are monotonic: a completed run is stored separately, but this
     // summary row only changes when the new score improves the player's record.
-    if (existing && existing.best_score >= run.score) {
+    if (existing && existing.best_score >= finalScore) {
       return mapBestScore(existing);
     }
 
@@ -126,7 +62,7 @@ export async function updateBestScore(
       const result = await supabase
         .from("best_scores")
         .update({
-          best_score: run.score,
+          best_score: finalScore,
           moves: run.moves,
           time_seconds: run.timeSeconds,
           play_session_id: playSessionId,
@@ -152,7 +88,7 @@ export async function updateBestScore(
       .insert({
         user_id: run.userId,
         level_id: run.levelId,
-        best_score: run.score,
+        best_score: finalScore,
         moves: run.moves,
         time_seconds: run.timeSeconds,
         play_session_id: playSessionId,

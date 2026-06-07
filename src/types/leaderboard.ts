@@ -3,11 +3,11 @@ import type { Json } from "./supabase";
 export interface CompletedGameplayRunInput {
   userId: string;
   levelId: string;
-  score: number;
   moves: number;
   timeSeconds: number;
   completedAt?: string;
   metadata?: Json;
+  completionStatus?: "completed";
 }
 
 export interface GameplaySession {

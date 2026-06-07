@@ -4,9 +4,9 @@ import type {
   BestScore,
   CompletedGameplayRunInput,
   GameplaySession,
+  ScoreBreakdown,
 } from "../types/leaderboard";
 import type { Json } from "../types/supabase";
-import { calculateCompletionScore, updateBestScore } from "./scoreService";
 import { ensurePublicUserProfile, getAuthenticatedUser, resolveAuthenticatedUsername } from "./profileService";
 
 interface CompletedLevelInput {
@@ -14,6 +14,12 @@ interface CompletedLevelInput {
   coinsCollected: number;
   moves: number;
   timeSeconds: number;
+}
+
+interface RecordCompletedRunResponse {
+  session: GameplaySession;
+  bestScore: BestScore;
+  scoreBreakdown: ScoreBreakdown;
 }
 
 function mapGameplaySession(row: {
@@ -68,7 +74,7 @@ export async function storeGameplaySession(run: CompletedGameplayRunInput) {
       .insert({
         user_id: run.userId,
         level_id: run.levelId,
-        score: run.score,
+        score: (run.metadata as { finalScore?: number } | undefined)?.finalScore ?? 0,
         moves: run.moves,
         time_seconds: run.timeSeconds,
         completed_at: run.completedAt,
@@ -86,10 +92,7 @@ export async function storeGameplaySession(run: CompletedGameplayRunInput) {
     const session = mapGameplaySession(result.data);
     
     console.log("UPDATING BEST SCORE");
-    const bestScore = await updateBestScore(run, session.id);
-    console.log("BEST SCORE RESULT", { bestScore });
-
-    return { session, bestScore };
+    return { session, bestScore: null };
   } catch (error) {
     console.error("FULL ERROR", error);
     throw error;
@@ -99,6 +102,7 @@ export async function storeGameplaySession(run: CompletedGameplayRunInput) {
 export async function recordCompletedRun(run: CompletedGameplayRunInput): Promise<{
   session: GameplaySession;
   bestScore: BestScore;
+  scoreBreakdown: ScoreBreakdown;
 }> {
   try {
     const supabase = getSupabaseClient();
@@ -107,11 +111,11 @@ export async function recordCompletedRun(run: CompletedGameplayRunInput): Promis
     const result = await supabase.rpc("record_completed_run", {
       p_user_id: run.userId,
       p_level_id: run.levelId,
-      p_score: run.score,
       p_moves: run.moves,
       p_time_seconds: run.timeSeconds,
       p_completed_at: run.completedAt,
       p_metadata: run.metadata ?? {},
+      p_completion_status: run.completionStatus ?? "completed",
     });
 
     console.log("PLAY SESSION RESULT", result);
@@ -126,16 +130,19 @@ export async function recordCompletedRun(run: CompletedGameplayRunInput): Promis
       throw new Error("Unexpected response from record_completed_run.");
     }
 
-    const session = (result.data as { session?: unknown }).session;
-    const bestScore = (result.data as { bestScore?: unknown }).bestScore;
+    const response = result.data as Partial<RecordCompletedRunResponse>;
+    const session = response.session;
+    const bestScore = response.bestScore;
+    const scoreBreakdown = response.scoreBreakdown;
 
-    if (!session || !bestScore) {
-      throw new Error("record_completed_run did not return session and bestScore.");
+    if (!session || !bestScore || !scoreBreakdown) {
+      throw new Error("record_completed_run did not return session, bestScore, and scoreBreakdown.");
     }
 
     return {
       session: session as GameplaySession,
       bestScore: bestScore as BestScore,
+      scoreBreakdown: scoreBreakdown as ScoreBreakdown,
     };
   } catch (error) {
     console.error("FULL ERROR", error);
@@ -152,27 +159,19 @@ export async function recordCompletedLevel({
   // Convert local gameplay state into the persistence contract at the boundary
   // so UI hooks do not need to know about user ids or score metadata shape.
   const { id: userId } = await ensureAuthenticatedUserProfile();
-  const scoreBreakdown = calculateCompletionScore({
-    coinsCollected,
-    moves,
-    timeSeconds,
-    difficulty: level.difficulty,
-    bombPreviewSeconds: level.bombPreviewSeconds,
-  });
 
   return recordCompletedRun({
     userId,
     levelId: level.id,
-    score: scoreBreakdown.finalScore,
     moves,
     timeSeconds,
+    completionStatus: "completed",
     completedAt: new Date().toISOString(),
     metadata: {
       coinsCollected,
       levelName: level.name,
       difficulty: level.difficulty,
       bombPreviewSeconds: level.bombPreviewSeconds ?? 3,
-      scoreBreakdown,
     },
   });
 }

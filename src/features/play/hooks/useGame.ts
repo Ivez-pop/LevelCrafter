@@ -9,7 +9,6 @@ import { recordCompletedLevel } from "../../../services/gameplayService";
 import { isDynamicDangerTile } from "../../../constants/tiles";
 import { retroAudio } from "../../../audio/retroAudio";
 import type { FacingDirection } from "../../../game/movement";
-import { calculateCompletionScore } from "../../../services/scoreService";
 import type { ScoreBreakdown } from "../../../types/leaderboard";
 
 type DynamicDangerState = { dx: number; dy: number; underTile: Tile };
@@ -442,15 +441,6 @@ export function useGame(): GameState & GameActions {
         0,
         Math.floor((Date.now() - (startedAtRef.current ?? Date.now())) / 1000),
       );
-      const nextScoreBreakdown = calculateCompletionScore({
-        coinsCollected: collected,
-        moves: nextMoveCount,
-        timeSeconds: completionTimeSeconds,
-        difficulty: level.difficulty,
-        bombPreviewSeconds: level.bombPreviewSeconds,
-      });
-      setScoreBreakdown(nextScoreBreakdown);
-
       // Persist completion in the background so the win screen remains snappy.
       // Failures are logged because local play completion is already resolved.
       void recordCompletedLevel({
@@ -458,9 +448,13 @@ export function useGame(): GameState & GameActions {
         coinsCollected: collected,
         moves: nextMoveCount,
         timeSeconds: completionTimeSeconds,
-      }).catch((error: unknown) => {
+      })
+        .then(({ scoreBreakdown: serverScoreBreakdown }) => {
+          setScoreBreakdown(serverScoreBreakdown);
+        })
+        .catch((error: unknown) => {
         console.error("[useGame] failed to persist completed level", error);
-      });
+        });
 
       setPlayer(nextPosition);
       setDeathReason(null);

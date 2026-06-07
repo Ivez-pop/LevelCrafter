@@ -214,11 +214,11 @@ export interface Database {
         Args: {
           p_user_id: string;
           p_level_id: string;
-          p_score: number;
           p_moves: number;
           p_time_seconds: number;
           p_completed_at?: string;
           p_metadata?: Json;
+          p_completion_status?: string;
         };
         Returns: Json;
       };
