@@ -340,7 +340,7 @@ export function useGame(): GameState & GameActions {
     setCountdownValue(null);
     setCollected(0);
     movesRef.current = 0;
-    startedAtRef.current = Date.now();
+    startedAtRef.current = null;
     dynamicDirectionsRef.current = new Map();
     clearMovementTimeout();
     clearCountdownTimeout();
@@ -370,6 +370,13 @@ export function useGame(): GameState & GameActions {
       // During the bomb preview the board is intentionally read-only; otherwise
       // players could move while hidden hazards are still being revealed.
       return;
+    }
+
+    // Start active-play timing from the first user move after the bomb preview,
+    // not from level load. This keeps HUD time and score penalties focused on
+    // actual gameplay instead of the memorization countdown.
+    if (startedAtRef.current === null) {
+      startedAtRef.current = Date.now();
     }
 
     const result = processMove(level, player, direction);
@@ -484,7 +491,7 @@ export function useGame(): GameState & GameActions {
       setCountdownValue(null);
       setCollected(0);
       movesRef.current = 0;
-      startedAtRef.current = Date.now();
+      startedAtRef.current = null;
       dynamicDirectionsRef.current = new Map();
       setMoves(0);
       setStatus("continue");

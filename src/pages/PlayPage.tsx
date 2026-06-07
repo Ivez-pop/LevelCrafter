@@ -21,7 +21,12 @@ import {
 
 function PlayPage() {
   const game = useGame();
-  const timer = useGameTimer(game.level?.id ?? null, game.status);
+  const timer = useGameTimer(
+    game.level?.id ?? null,
+    game.status,
+    game.countdownValue,
+    game.moves,
+  );
   const navigate = useNavigate();
   const [leaderboardLevel, setLeaderboardLevel] = useState<Level | null>(null);
   const [levelCode, setLevelCode] = useState("");

@@ -10,23 +10,35 @@ function formatElapsedTime(totalSeconds: number) {
 
 /**
  * Tracks visible elapsed play time for the active level.
- * The timer freezes on terminal states but resets when a new level starts or a
- * retry transitions back into active play.
+ * The timer freezes during the bomb preview and starts only after the player's
+ * first post-preview move attempt.
  */
-export function useGameTimer(levelId: string | null, status: GameStatus) {
+export function useGameTimer(
+  levelId: string | null,
+  status: GameStatus,
+  countdownValue: string | null,
+  moves: number,
+) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Reset immediately when no active game is selected.
   useEffect(() => {
-    if (!levelId || status === "idle") {
+    if (!levelId || status === "idle" || moves === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setElapsedSeconds(0);
     }
-  }, [levelId, status]);
+  }, [levelId, moves, status]);
 
   useEffect(() => {
-    // Freeze the timer in end-game or idle states.
-    if (!levelId || status === "win" || status === "restart" || status === "idle") {
+    // Freeze the timer before play starts, during preview, and in terminal states.
+    if (
+      !levelId ||
+      moves === 0 ||
+      countdownValue !== null ||
+      status === "win" ||
+      status === "restart" ||
+      status === "idle"
+    ) {
       return;
     }
 
@@ -35,7 +47,7 @@ export function useGameTimer(levelId: string | null, status: GameStatus) {
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [levelId, status]);
+  }, [countdownValue, levelId, moves, status]);
 
   // Detect retry/new-level transitions because the same hook instance can stay
   // mounted while the user restarts from the win/game-over overlay.
