@@ -8,10 +8,15 @@ function formatElapsedTime(totalSeconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+/**
+ * Tracks visible elapsed play time for the active level.
+ * The timer freezes on terminal states but resets when a new level starts or a
+ * retry transitions back into active play.
+ */
 export function useGameTimer(levelId: string | null, status: GameStatus) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Reset timer to 0 when starting or restarting a game
+  // Reset immediately when no active game is selected.
   useEffect(() => {
     if (!levelId || status === "idle") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -20,7 +25,7 @@ export function useGameTimer(levelId: string | null, status: GameStatus) {
   }, [levelId, status]);
 
   useEffect(() => {
-    // Freeze the timer if we are in an end-game or idle state
+    // Freeze the timer in end-game or idle states.
     if (!levelId || status === "win" || status === "restart" || status === "idle") {
       return;
     }
@@ -32,8 +37,8 @@ export function useGameTimer(levelId: string | null, status: GameStatus) {
     return () => window.clearInterval(intervalId);
   }, [levelId, status]);
 
-  // We need to detect when the user hits 'Retry' or plays a new level,
-  // which transitions the status to "continue" from an end-game state.
+  // Detect retry/new-level transitions because the same hook instance can stay
+  // mounted while the user restarts from the win/game-over overlay.
   const previousStatus = useRef<GameStatus>(status);
   const previousLevelId = useRef<string | null>(levelId);
 
@@ -44,7 +49,6 @@ export function useGameTimer(levelId: string | null, status: GameStatus) {
       status === "continue";
 
     if (isNewLevel || isRestarting) {
-       
       setElapsedSeconds(0);
     }
 

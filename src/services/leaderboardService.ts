@@ -14,6 +14,11 @@ interface LevelLeaderboardRow {
   } | null;
 }
 
+/**
+ * Reads the top scores for one level and assigns display ranks from the ordered
+ * result set. The query uses score descending and time ascending as the visible
+ * tiebreaker.
+ */
 export async function getLevelLeaderboard(levelId: string, limit = 10) {
   const supabase = getSupabaseClient();
 

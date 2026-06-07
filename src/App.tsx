@@ -12,6 +12,8 @@ import { RetroAudioController } from "./components/RetroAudioController";
 
 function ConditionalThemeSelector() {
   const location = useLocation();
+  // Theme selection is a home-screen affordance; hiding it elsewhere keeps play
+  // and editor screens focused on their primary controls.
   if (location.pathname !== "/") {
     return null;
   }
@@ -21,6 +23,7 @@ function ConditionalThemeSelector() {
 function App() {
   return (
     <BrowserRouter>
+      {/* Mount once inside the router so audio can follow route changes. */}
       <RetroAudioController />
       <ConditionalThemeSelector />
       <Routes>

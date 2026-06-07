@@ -39,11 +39,9 @@ function PlayPage() {
   };
 
   useEffect(() => {
-    setLeaderboardLevel(null);
-  }, []);
-
-  useEffect(() => {
     if (!game.level && controlsRef.current) {
+      // The import button visually belongs with the difficulty controls, so it
+      // portals into that button row once the child component has rendered.
       const buttons = Array.from(controlsRef.current.querySelectorAll("button"));
       const hardBtn = buttons.find((b) => b.textContent?.toUpperCase().includes("HARD"));
       if (hardBtn && hardBtn.parentElement) {
@@ -64,6 +62,8 @@ function PlayPage() {
       game.status === "restart" ||
       game.countdownValue !== null;
 
+    // Modal overlays and terminal game states should not scroll the page behind
+    // them, especially on small screens where the board can be wider than view.
     const previousOverflow = document.body.style.overflow;
 
     if (shouldLockScroll) {
@@ -114,6 +114,8 @@ function PlayPage() {
   };
 
   const renderedGrid =
+    // Game state stores the player separately from the static level grid. The
+    // board receives a rendered overlay so tile art stays simple.
     game.level?.grid.map((row: Tile[], rowIndex: number) =>
       row.map((cell: Tile, colIndex: number) => {
         if (game.player?.x === colIndex && game.player?.y === rowIndex) {

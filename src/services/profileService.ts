@@ -57,6 +57,11 @@ function readMetadataString(user: User, key: string) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+/**
+ * Derives a display-safe username from auth metadata with sensible fallbacks.
+ * This is used before a public users row exists, so it must not depend on
+ * profile-table data.
+ */
 export function resolveAuthenticatedUsername(user: User) {
   return (
     readMetadataString(user, "username")
@@ -87,6 +92,11 @@ export async function getAuthenticatedUser() {
   return user;
 }
 
+/**
+ * Creates the public profile row expected by leaderboards and dashboards.
+ * Supabase Auth is the source of identity, while this table stores display data
+ * that can be joined from public gameplay queries.
+ */
 export async function ensurePublicUserProfile(user: User): Promise<PublicUserRow> {
   try {
     const supabase = getSupabaseClient();
@@ -148,6 +158,8 @@ export async function updateUsername(newUsername: string) {
       throw new Error("Username cannot be empty.");
     }
 
+    // Keep auth metadata and the public profile row in sync so both immediate
+    // session reads and joined leaderboard reads show the same display name.
     const { error: authError } = await supabase.auth.updateUser({
       data: {
         username,
@@ -192,6 +204,8 @@ export async function updatePlayerAvatar(avatarId: string) {
   const user = await getAuthenticatedUser();
   const normalizedAvatarId = normalizePlayerAvatarId(avatarId);
 
+  // Avatar selection is written to auth metadata, the public profile row, and
+  // local storage because different screens bootstrap from different sources.
   const { error: authError } = await supabase.auth.updateUser({
     data: {
       player_avatar: normalizedAvatarId,
@@ -222,6 +236,8 @@ export async function publishCreatedLevel(level: Level) {
   const supabase = getSupabaseClient();
   const user = await getAuthenticatedUser().catch(() => null);
 
+  // Level publishing is best-effort for anonymous editor flows. Authenticated
+  // users get owner_id set so their profile can list created maps.
   if (!user) {
     return null;
   }
@@ -258,6 +274,8 @@ export async function getProfileDashboard(): Promise<ProfileDashboardData> {
   const user = await getAuthenticatedUser();
   const profile = await ensurePublicUserProfile(user);
 
+  // Load independent dashboard sections concurrently; profile creation above
+  // guarantees the joins have a public user row to reference.
   const [{ data: createdMaps, error: createdMapsError }, { data: playHistory, error: playHistoryError }, rankings] =
     await Promise.all([
       supabase

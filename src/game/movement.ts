@@ -12,6 +12,11 @@ export type FacingDirection =
   | "left"
   | "right";
 
+/**
+ * Pure grid movement helper.
+ * Collision is deliberately handled by the game engine so callers can inspect
+ * the proposed position before deciding whether the move is legal.
+ */
 export function getNextPosition(
   current: Position,
   direction: Direction

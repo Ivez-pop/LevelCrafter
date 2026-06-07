@@ -1,6 +1,13 @@
 import type { Level } from "../types/level";
 
+/**
+ * Builds a self-contained playable HTML export for a level.
+ * The export intentionally uses inline CSS/JS so it can be opened directly from
+ * disk without Vite, Supabase, or the rest of the application bundle.
+ */
 export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) {
+  // Escape '<' inside JSON so the embedded script cannot be prematurely closed
+  // by a level name or metadata string containing '</script>'.
   const embeddedLevel = JSON.stringify(level).replace(/</g, "\\u003c");
 
   return `<!doctype html>
@@ -111,6 +118,8 @@ export function buildStandaloneGameHtml(level: Omit<Level, "id" | "createdAt">) 
 }
 
 function escapeHtml(value: string) {
+  // All level names used in markup are escaped because exported levels may come
+  // from pasted/imported JSON rather than trusted application input.
   return value.replace(/[&<>"']/g, (char) => {
     const entities: Record<string, string> = {
       "&": "&amp;",

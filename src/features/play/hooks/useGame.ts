@@ -32,6 +32,11 @@ const getDynamicDangerState = (tile: Tile): DynamicDangerState => ({
   underTile: "empty",
 });
 
+/**
+ * Advances all moving danger tiles by one tick while preserving the tile each
+ * danger is currently covering. This lets hazards move across coins, vents, and
+ * exits without erasing the authored level underneath them.
+ */
 function advanceDynamicDangers(
   grid: Tile[][],
   player: Position,
@@ -151,6 +156,8 @@ export function useGame(): GameState & GameActions {
   const [ventDestinations, setVentDestinations] = useState<VentDestination[]>([]);
 
   const normalizeGrid = (grid: Tile[][]) =>
+    // The player's location is tracked separately from the static board so a
+    // reset/replay does not leave stale player tiles behind in the level grid.
     grid.map((row) =>
       row.map((tile) =>
         tile === "player" ? "empty" : tile,
@@ -190,6 +197,8 @@ export function useGame(): GameState & GameActions {
     (previewSeconds: number) => {
       clearCountdownTimeout();
       setShowBombs(true);
+      // Clamp persisted/imported values before using them for timers. Imported
+      // levels can come from arbitrary JSON, so the hook defends its own state.
       const clampedSeconds = Math.max(1, Math.min(10, Math.floor(previewSeconds)));
       setCountdownValue(String(clampedSeconds));
 
@@ -232,6 +241,8 @@ export function useGame(): GameState & GameActions {
     setMessage("Boom!");
     retroAudio.playDeath();
 
+    // Keep the explosion visible briefly before showing the terminal game-over
+    // state so the player gets feedback about the exact collision tile.
     explosionTimeoutRef.current = window.setTimeout(() => {
       explosionTimeoutRef.current = null;
       setExplosion(null);
@@ -272,6 +283,11 @@ export function useGame(): GameState & GameActions {
     [clearVentSelection],
   );
 
+  /**
+   * Loads the level list for a difficulty without starting a run.
+   * Starting is separate because the level picker and imported levels both need
+   * to populate available maps before choosing a specific level.
+   */
   const loadGame = useCallback(async (selectedDifficulty: Difficulty) => {
     console.log("[useGame] loadGame", selectedDifficulty);
     setDifficulty(selectedDifficulty);
@@ -351,6 +367,8 @@ export function useGame(): GameState & GameActions {
     }
 
     if (countdownValue !== null) {
+      // During the bomb preview the board is intentionally read-only; otherwise
+      // players could move while hidden hazards are still being revealed.
       return;
     }
 
@@ -415,6 +433,8 @@ export function useGame(): GameState & GameActions {
       });
       setScoreBreakdown(nextScoreBreakdown);
 
+      // Persist completion in the background so the win screen remains snappy.
+      // Failures are logged because local play completion is already resolved.
       void recordCompletedLevel({
         level,
         coinsCollected: collected,
@@ -444,7 +464,7 @@ export function useGame(): GameState & GameActions {
     setStatus("continue");
     setMessage("");
     retroAudio.playMove();
-  }, [clearMovementTimeout, countdownValue, enterVentSelection, level, player, playerDirection, pulseMovement, status, collected, triggerHazardReset, isSelectingVent]);
+  }, [clearMovementTimeout, countdownValue, enterVentSelection, level, player, playerDirection, pulseMovement, status, collected, setDeathFromTile, triggerHazardReset, isSelectingVent]);
 
   const handlePlayLevel = useCallback(async (id: string) => {
     console.log("[useGame] handlePlayLevel", id);
@@ -489,6 +509,8 @@ export function useGame(): GameState & GameActions {
         (vent) => vent.x === destination.x && vent.y === destination.y,
       );
 
+      // Only accept destinations computed from the active level. This prevents
+      // stale UI events from teleporting the player after selection closes.
       if (!isAllowed) {
         return;
       }
@@ -529,6 +551,8 @@ export function useGame(): GameState & GameActions {
         dynamicDirectionsRef.current = advanced.directions;
 
         if (advanced.hitPlayer) {
+          // Dynamic hazards can kill the player without a player-initiated move,
+          // so this path mirrors tile deaths and cancels transient vent state.
           clearVentSelection();
           setDeathFromTile(advanced.grid[player.y]?.[player.x]);
           triggerHazardReset(player);
@@ -541,7 +565,7 @@ export function useGame(): GameState & GameActions {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [activeLevelId, clearVentSelection, player, status, triggerHazardReset]);
+  }, [activeLevelId, clearVentSelection, player, setDeathFromTile, status, triggerHazardReset]);
 
   useEffect(() => {
     if (!isSelectingVent) {

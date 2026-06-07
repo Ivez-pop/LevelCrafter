@@ -5,6 +5,11 @@ import { editorTiles } from "../constants/tiles";
 const allowedTiles = new Set<Tile>(editorTiles);
 const traversableTiles = new Set<Tile>(["empty", "coin", "exit", "player", "vent"]);
 
+/**
+ * Returns every vent except the one currently being explored.
+ * Validation treats vents as graph edges so authored teleport routes count as
+ * valid paths to the exit.
+ */
 function getVentDestinations(grid: Tile[][], entryX: number, entryY: number) {
   const vents: Array<[number, number]> = [];
 
@@ -19,6 +24,11 @@ function getVentDestinations(grid: Tile[][], entryX: number, entryY: number) {
   return vents.filter(([x, y]) => x !== entryX || y !== entryY);
 }
 
+/**
+ * Breadth-first search from player to exit across traversable tiles.
+ * Dynamic hazards and bombs are intentionally not traversable for validation;
+ * they are obstacles unless future rules model timing-aware paths.
+ */
 function hasPathFromPlayerToExit(grid: Tile[][]): boolean {
   let startX = -1;
   let startY = -1;
@@ -103,6 +113,8 @@ export const validateLevel = (
     return false;
   }
 
+  // Validate the authored grid before checking difficulty-specific dimensions
+  // so user-facing errors point to the most actionable issue first.
   let playerCount = 0;
   let exitCount = 0;
   let ventCount = 0;

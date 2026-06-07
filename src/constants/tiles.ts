@@ -1,5 +1,7 @@
 import type { Tile } from "../types/level";
 
+// Full set of tiles accepted by validation/import. The UI palette may expose a
+// smaller subset, but storage must recognize every runtime tile.
 export const editorTiles: Tile[] = [
   "wall",
   "coin",
@@ -64,6 +66,11 @@ export const tileIcons: Record<Tile, string> = {
   exit: "EX",
 };
 
+/**
+ * Dynamic danger tiles move on the gameplay timer and kill on contact.
+ * Grouping them here keeps validation, movement, and rendering aligned when new
+ * danger variants are introduced.
+ */
 export function isDynamicDangerTile(tile: Tile) {
   return (
     tile === "enemyHorizontal" ||

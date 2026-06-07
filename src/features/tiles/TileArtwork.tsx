@@ -23,6 +23,8 @@ export function TileArtwork({
 }: TileArtworkProps) {
   const asset = getTileAsset(tile);
   const playerAvatarId = usePlayerAvatar();
+  // Bombs fade out after the preview timer but still occupy the same logical
+  // hazard tile for collision and reset handling.
   const isHiddenBomb = tile === "hazard" && !showBombs;
 
   return (

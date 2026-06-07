@@ -38,6 +38,10 @@ function mapGameplaySession(row: {
   };
 }
 
+/**
+ * Ensures authenticated users have a public profile row before writing gameplay
+ * data that is later joined for leaderboards and dashboards.
+ */
 async function ensureAuthenticatedUserProfile() {
   const user = await getAuthenticatedUser();
 
@@ -49,6 +53,11 @@ async function ensureAuthenticatedUserProfile() {
   };
 }
 
+/**
+ * Legacy two-step persistence path: insert the session, then update best score.
+ * recordCompletedRun prefers the RPC so these writes can be transactionally
+ * coupled when the database function is available.
+ */
 export async function storeGameplaySession(run: CompletedGameplayRunInput) {
   try {
     const supabase = getSupabaseClient();
@@ -111,6 +120,8 @@ export async function recordCompletedRun(run: CompletedGameplayRunInput): Promis
       throw result.error;
     }
 
+    // The RPC returns both rows so callers can update UI without issuing a
+    // second read after completion.
     if (!result.data || typeof result.data !== "object" || Array.isArray(result.data)) {
       throw new Error("Unexpected response from record_completed_run.");
     }
@@ -138,6 +149,8 @@ export async function recordCompletedLevel({
   moves,
   timeSeconds,
 }: CompletedLevelInput) {
+  // Convert local gameplay state into the persistence contract at the boundary
+  // so UI hooks do not need to know about user ids or score metadata shape.
   const { id: userId } = await ensureAuthenticatedUserProfile();
   const scoreBreakdown = calculateCompletionScore({
     coinsCollected,

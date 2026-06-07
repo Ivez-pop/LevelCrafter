@@ -3,6 +3,11 @@ import type {
   Position,
 } from "../types/level";
 
+/**
+ * Finds the authored player start in a level.
+ * Validation should guarantee exactly one player tile, so throwing here is a
+ * hard data-integrity failure rather than a recoverable gameplay state.
+ */
 export function getPlayerStart(
   level: Level
 ): Position {

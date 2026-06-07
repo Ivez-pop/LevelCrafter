@@ -56,6 +56,11 @@ function emptyGrid(size: number) {
   );
 }
 
+/**
+ * Downloads generated exports through a temporary object URL.
+ * The URL is revoked immediately after click dispatch to avoid leaking blob
+ * references during repeated exports in one browser session.
+ */
 function downloadFile(filename: string, contents: string, type: string) {
   const blob = new Blob([contents], { type });
   const url = URL.createObjectURL(blob);
@@ -106,6 +111,8 @@ function CreateLevelPage() {
   const navigate = useNavigate();
 
   const commitGrid = (nextGrid: Tile[][]) => {
+    // Store full grid snapshots because editor actions are small and this keeps
+    // undo/redo independent from how each action was produced.
     setHistory((items) => [...items, cloneGrid(grid)]);
     setFuture([]);
     setGrid(nextGrid);
@@ -207,6 +214,8 @@ function CreateLevelPage() {
 
     const updatedGrid = cloneGrid(grid);
 
+    // Player and exit are singleton gameplay markers; painting either one moves
+    // the existing marker instead of allowing invalid duplicate starts/exits.
     if (selectedTile === "player" || selectedTile === "exit") {
       for (const row of updatedGrid) {
         const existingIndex = row.indexOf(selectedTile);
@@ -273,6 +282,8 @@ function CreateLevelPage() {
     setEditingLevelId(id);
     setImportedSavedLevelId(null);
 
+    // Publish ownership metadata in the background. The save itself has already
+    // succeeded, so a profile-sync failure should not discard the editor draft.
     void publishCreatedLevel({
       id,
       ...draft,
@@ -347,6 +358,8 @@ function CreateLevelPage() {
   };
 
   const applyImportedLevelToEditor = (level: Level) => {
+    // Imported saved levels are loaded as editable copies. Keeping editingLevelId
+    // empty prevents accidental overwrites until the user explicitly saves.
     setDifficulty(level.difficulty);
     setGrid(level.grid.map((row) => [...row]));
     setHistory([]);

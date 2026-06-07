@@ -41,6 +41,8 @@ class RetroAudio {
   private activeSong: PageSong = "home";
 
   unlock() {
+    // Browsers require a user gesture before audio playback. All callers route
+    // through unlock so music and SFX start from the same resumed context.
     const context = this.getContext();
 
     void context.resume();
@@ -104,6 +106,8 @@ class RetroAudio {
     const musicGain = context.createGain();
     const sfxGain = context.createGain();
 
+    // Use separate gain nodes so looping music can stay quiet while button and
+    // gameplay effects remain punchy.
     masterGain.gain.value = 0.45;
     musicGain.gain.value = 0.14;
     sfxGain.gain.value = 0.6;
@@ -165,6 +169,8 @@ class RetroAudio {
     const startAt = context.currentTime + delay;
     const stopAt = startAt + duration;
 
+    // A tiny exponential envelope removes clicks at note start/stop while still
+    // keeping the sound intentionally crisp and retro.
     oscillator.type = wave;
     oscillator.frequency.setValueAtTime(frequency, startAt);
     envelope.gain.setValueAtTime(0.0001, startAt);
@@ -180,6 +186,10 @@ class RetroAudio {
 
 export const retroAudio = new RetroAudio();
 
+/**
+ * Maps routes to short looping melodies.
+ * Keeping this outside React lets the audio service stay framework-agnostic.
+ */
 export const getPageSong = (pathname: string): PageSong => {
   if (pathname.startsWith("/create")) return "create";
   if (pathname.startsWith("/play")) return "play";

@@ -2,6 +2,8 @@ import type { Tile } from "../../../types/level";
 import { TileArtwork } from "../../tiles/TileArtwork";
 import { tileLabels } from "../../../constants/tiles";
 
+// Keep the palette intentionally smaller than editorTiles: these are the tiles
+// a level author can place directly in the UI today.
 const editorPaletteTiles: Tile[] = [
   "wall",
   "coin",

@@ -36,6 +36,8 @@ function getOddCoordinates(limit: number) {
 }
 
 function getEvenBandIndex(limit: number) {
+  // Perfect-maze carving works on odd interior cells. Even-sized boards get an
+  // extra interior band connected after DFS so supported difficulties stay full.
   return limit - 2;
 }
 
@@ -100,6 +102,10 @@ function pickRandom<T>(items: T[]) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+/**
+ * Chooses player and exit cells that are far apart by path distance, not just
+ * by coordinates, so generated mazes feel like real runs instead of short walks.
+ */
 function selectEndpoints(grid: Tile[][]) {
   const pathCells = getPathCells(grid);
 
@@ -169,6 +175,8 @@ function carveDfsMaze(width: number, height: number) {
 
   grid[start[1]][start[0]] = "empty";
 
+  // DFS steps two cells at a time and carves the wall between cells, producing a
+  // connected maze with no isolated path islands.
   while (stack.length > 0) {
     const [x, y] = stack[stack.length - 1];
     const nextCells = getCarveDirections()
@@ -229,6 +237,8 @@ function carveDfsMaze(width: number, height: number) {
     }
   }
 
+  // Place gameplay markers after carving so they replace floor tiles without
+  // participating in the maze-carving algorithm itself.
   const endpoints = selectEndpoints(grid);
 
   if (!endpoints) {

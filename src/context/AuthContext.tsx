@@ -16,6 +16,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = getSupabaseClient();
 
+    // Hydrate the initial session before subscribing; onAuthStateChange only
+    // covers future auth transitions.
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
     });
@@ -36,6 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// AuthProvider and useAuth intentionally live together so the small auth context
+// stays discoverable. Splitting this hook would only satisfy Fast Refresh style
+// guidance without improving runtime behavior.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext);
 }
