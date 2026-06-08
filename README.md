@@ -4,11 +4,11 @@
 
 ## Project Links
 
-Demo Video: `https://youtu.be/cHKOrDZPw-U?si=1hhYFDztobo06hrW`
+Demo Video: https://youtu.be/cHKOrDZPw-U?si=1hhYFDztobo06hrW
 
-Live Site: `https://level-crafter.vercel.app/`
+Live Site: https://level-crafter.vercel.app/
 
-Repository: `https://github.com/codenamed22/LevelCrafter`
+Repository: https://github.com/codenamed22/LevelCrafter
 
 ---
 
@@ -642,21 +642,6 @@ Possible next steps:
 - Add comments or ratings for levels.
 - Add better mobile-specific editor controls.
 - Add richer standalone export visuals.
-
----
-
-## Documentation
-
-More documentation is available in the `readme/` folder:
-
-| File | Description |
-| --- | --- |
-| `readme/hld.md` | High-level design |
-| `readme/database-design.md` | Database, ranking, and leaderboard design |
-| `readme/workflow_phase1.md` | Phase 1 workflow notes |
-| `readme/workflow_phase2.md` | Phase 2 workflow notes |
-| `readme/SECURITY.md` | Security notes |
-| `readme/LICENSE.md` | License |
 
 ---
 
