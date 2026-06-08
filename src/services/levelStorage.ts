@@ -1,0 +1,350 @@
+import { getSupabaseClient } from "../lib/supabase";
+import { difficultySizes, type Difficulty } from "../constants/difficulty";
+import { editorTiles } from "../constants/tiles";
+import type { Level, Tile } from "../types/level";
+import type { Json } from "../types/supabase";
+
+type LevelRow = {
+  id: string;
+  owner_id: string | null;
+  name: string;
+  difficulty: string;
+  width: number;
+  height: number;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Normalizes a Supabase level row into the app's runtime Level shape.
+ * Metadata is intentionally validated at the boundary because legacy rows or
+ * hand-edited records can otherwise crash the play/editor screens later.
+ */
+function mapLevelRow(row: LevelRow): Level {
+  if (!isRecord(row.metadata)) {
+    throw new Error("Level metadata is missing or invalid.");
+  }
+
+  const grid = row.metadata.grid;
+  const bombPreviewSeconds = row.metadata.bombPreviewSeconds;
+
+  if (!Array.isArray(grid)) {
+    throw new Error("Level metadata grid is missing or invalid.");
+  }
+
+  const normalizedBombPreviewSeconds =
+    typeof bombPreviewSeconds === "number" && Number.isFinite(bombPreviewSeconds) && bombPreviewSeconds >= 1
+      ? bombPreviewSeconds
+      : 3;
+
+  return {
+    id: row.id,
+    name: row.name,
+    difficulty: row.difficulty as Difficulty,
+    bombPreviewSeconds: normalizedBombPreviewSeconds,
+    createdAt: Date.parse(row.created_at),
+    width: row.width,
+    height: row.height,
+    grid: grid as Tile[][],
+  };
+}
+
+export interface LevelListItem {
+  id: string;
+  name: string;
+  difficulty: Difficulty;
+  createdAt: number;
+}
+
+function genId() {
+  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(
+    36,
+  )}`;
+}
+
+/**
+ * Saves a level through an upsert so editor saves can create new maps or update
+ * the current draft without changing the UI flow.
+ */
+export async function saveLevel(level: Omit<Level, "id" | "createdAt">, levelId?: string): Promise<string> {
+  const supabase = getSupabaseClient();
+  const id = levelId ?? genId();
+  const { data: userData } = await supabase.auth.getUser();
+  const ownerId = userData.user?.id ?? null;
+
+  console.log("LEVEL BEFORE SAVE", level);
+
+  const { error } = await supabase.from("levels").upsert(
+    {
+      id,
+      owner_id: ownerId,
+      name: level.name,
+      difficulty: level.difficulty,
+      width: level.width,
+      height: level.height,
+      metadata: {
+        grid: level.grid,
+        bombPreviewSeconds: level.bombPreviewSeconds ?? 3,
+      },
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return id;
+}
+
+export async function deleteLevel(levelId: string) {
+  const supabase = getSupabaseClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const ownerId = userData.user?.id ?? null;
+
+  if (!ownerId) {
+    throw new Error("You must be logged in to delete a level.");
+  }
+
+  // Ownership is enforced in the delete query itself so a stale or malicious
+  // client-side level id cannot delete another user's map.
+  const { error, count } = await supabase
+    .from("levels")
+    .delete({ count: "exact" })
+    .eq("id", levelId)
+    .eq("owner_id", ownerId);
+
+  if (error) {
+    throw error;
+  }
+
+  if (count === 0) {
+    throw new Error("Level not found or you do not have permission to delete it.");
+  }
+
+  return true;
+}
+
+export async function getLevelsByDifficulty(difficulty: "easy" | "medium" | "hard") {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("levels")
+    .select("id, owner_id, name, difficulty, width, height, metadata, created_at, updated_at")
+    .eq("difficulty", difficulty)
+    .order("created_at", { ascending: true });
+
+  console.log("Requested Difficulty:", difficulty);
+  console.log("Supabase Data:", data);
+  console.log("Supabase Error:", error);
+
+  if (error) {
+    throw error;
+  }
+
+  const levels: Level[] = [];
+
+  // Skip invalid records rather than failing the whole picker. This keeps one
+  // bad community level from hiding every other playable map.
+  for (const row of data ?? []) {
+    try {
+      levels.push(mapLevelRow(row as LevelRow));
+    } catch (error) {
+      console.warn("Skipping invalid level row:", row.id, row.name, error);
+    }
+  }
+
+  return levels;
+}
+
+export async function getLevelById(id: string): Promise<Level | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("levels")
+    .select("id, owner_id, name, difficulty, width, height, metadata, created_at, updated_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapLevelRow(data as LevelRow) : null;
+}
+
+export async function getLevelsByOwner(userId: string): Promise<LevelListItem[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("levels")
+    .select("id, owner_id, name, difficulty, width, height, metadata, created_at, updated_at")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const levels: LevelListItem[] = [];
+
+  for (const row of data ?? []) {
+    try {
+      const difficulty = row.difficulty as Difficulty;
+
+      if (difficulty !== "easy" && difficulty !== "medium" && difficulty !== "hard") {
+        throw new Error("Level difficulty is missing or invalid.");
+      }
+
+      levels.push({
+        id: row.id,
+        name: row.name,
+        difficulty,
+        createdAt: Date.parse(row.created_at),
+      });
+    } catch (error) {
+      console.warn("Skipping invalid owned level row:", row.id, row.name, error);
+    }
+  }
+
+  return levels;
+}
+
+export async function importLevel(level: Omit<Level, "id" | "createdAt">): Promise<string> {
+  return saveLevel(level);
+}
+
+const allowedTiles = new Set<Tile>(editorTiles);
+
+function normalizeDifficulty(value: unknown, gridSize: number): Difficulty {
+  if (
+    value === "easy" ||
+    value === "medium" ||
+    value === "hard"
+  ) {
+    return value;
+  }
+
+  // Imported files may omit difficulty; infer it from square grid size when the
+  // dimensions match one of the supported difficulty presets.
+  const inferred = Object.entries(difficultySizes).find(
+    ([, size]) => size === gridSize,
+  )?.[0];
+
+  if (
+    inferred === "easy" ||
+    inferred === "medium" ||
+    inferred === "hard"
+  ) {
+    return inferred;
+  }
+
+  throw new Error("Level difficulty is missing or invalid.");
+}
+
+function normalizeGrid(value: unknown): Tile[][] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Level grid is missing or empty.");
+  }
+
+  let playerCount = 0;
+  let exitCount = 0;
+  const width = Array.isArray(value[0]) ? value[0].length : 0;
+
+  if (width === 0) {
+    throw new Error("Level grid rows must contain tiles.");
+  }
+
+  // Imported levels are treated as untrusted input: validate shape, tile names,
+  // and core gameplay invariants before persisting anything to Supabase.
+  const grid = value.map((row) => {
+    if (!Array.isArray(row) || row.length !== width) {
+      throw new Error("Level grid must be rectangular.");
+    }
+
+    return row.map((tile) => {
+      if (!allowedTiles.has(tile as Tile)) {
+        throw new Error("Level grid contains an unknown tile.");
+      }
+
+      if (tile === "player") {
+        playerCount++;
+      }
+
+      if (tile === "exit") {
+        exitCount++;
+      }
+
+      return tile as Tile;
+    });
+  });
+
+  if (grid.length !== width) {
+    throw new Error("Level grid must be square.");
+  }
+
+  if (playerCount !== 1) {
+    throw new Error("Level must contain exactly one player.");
+  }
+
+  if (exitCount !== 1) {
+    throw new Error("Level must contain exactly one exit.");
+  }
+
+  return grid;
+}
+
+function normalizeImportedLevel(value: unknown): Omit<Level, "id" | "createdAt"> {
+  if (!isRecord(value)) {
+    throw new Error("Level file must contain a JSON object.");
+  }
+
+  const grid = normalizeGrid(value.grid);
+  const difficulty = normalizeDifficulty(value.difficulty, grid.length);
+  const expectedSize = difficultySizes[difficulty];
+  const bombPreviewSeconds =
+    typeof value.bombPreviewSeconds === "number" && Number.isFinite(value.bombPreviewSeconds) && value.bombPreviewSeconds >= 1
+      ? Math.min(10, Math.floor(value.bombPreviewSeconds))
+      : 3;
+
+  if (grid.length !== expectedSize) {
+    throw new Error(`Level grid must be ${expectedSize}x${expectedSize}.`);
+  }
+
+  const name = typeof value.name === "string" ? value.name.trim() : "";
+
+  return {
+    name: name || "Imported Level",
+    difficulty,
+    bombPreviewSeconds,
+    width: grid[0].length,
+    height: grid.length,
+    grid,
+  };
+}
+
+export async function importLevelFromJson(file: File): Promise<string> {
+  const text = await file.text();
+
+  return saveLevel(normalizeImportedLevel(JSON.parse(text)));
+}
+
+export function encodeLevelCode(level: Omit<Level, "id" | "createdAt">): string {
+  // TextEncoder/TextDecoder keeps level codes Unicode-safe before base64
+  // encoding; btoa/atob alone only support Latin-1 strings reliably.
+  const json = JSON.stringify(normalizeImportedLevel(level));
+  const bytes = new TextEncoder().encode(json);
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+
+  return btoa(binary);
+}
+
+export async function importLevelFromCode(code: string): Promise<string> {
+  const binary = atob(code.trim());
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const json = new TextDecoder().decode(bytes);
+
+  return saveLevel(normalizeImportedLevel(JSON.parse(json)));
+}
