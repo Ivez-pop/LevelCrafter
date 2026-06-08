@@ -4,11 +4,11 @@
 
 ## Project Links
 
-Demo Video: `[Add demo video link here]`
+Demo Video: `https://youtu.be/cHKOrDZPw-U?si=1hhYFDztobo06hrW`
 
-Live Site: `[Add hosted site link here]`
+Live Site: `https://level-crafter.vercel.app/`
 
-Repository: `[Add GitHub repository link here]`
+Repository: `https://github.com/codenamed22/LevelCrafter`
 
 ---
 
